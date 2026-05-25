@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap');
+
+:root {
+  /* Font Families */
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  /* Theme: Dark (Default) */
+  --hue-base: 224;
+  --bg-primary: hsl(var(--hue-base), 25%, 6%);
+  --bg-secondary: hsl(var(--hue-base), 22%, 10%);
+  --bg-tertiary: hsl(var(--hue-base), 20%, 14%);
+
+  --text-primary: hsl(var(--hue-base), 10%, 94%);
+  --text-secondary: hsl(var(--hue-base), 12%, 70%);
+  --text-muted: hsl(var(--hue-base), 10%, 48%);
+
+  /* Premium Glowing Accent HSL System */
+  --hue-accent: 265; /* Neon Violet */
+  --hue-cyan: 180; /* Electric Teal */
+
+  --accent-primary: hsl(var(--hue-accent), 85%, 60%);
+  --accent-glow: hsla(var(--hue-accent), 85%, 60%, 0.4);
+  --accent-secondary: hsl(var(--hue-cyan), 85%, 50%);
+  --accent-secondary-glow: hsla(var(--hue-cyan), 85%, 50%, 0.3);
+
+  /* Borders & Dividers */
+  --border-color: hsl(var(--hue-base), 15%, 16%);
+  --border-glow: hsla(var(--hue-accent), 85%, 60%, 0.15);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 25px var(--accent-glow);
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Glassmorphism Styles */
+  --glass-bg: rgba(10, 11, 15, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(16px);
+}
+
+/* Light Theme Variables */
+[data-theme='light'] {
+  --bg-primary: hsl(var(--hue-base), 20%, 98%);
+  --bg-secondary: hsl(var(--hue-base), 15%, 94%);
+  --bg-tertiary: hsl(var(--hue-base), 10%, 90%);
+
+  --text-primary: hsl(var(--hue-base), 25%, 12%);
+  --text-secondary: hsl(var(--hue-base), 15%, 35%);
+  --text-muted: hsl(var(--hue-base), 10%, 55%);
+
+  --accent-primary: hsl(var(--hue-accent), 90%, 50%);
+  --accent-glow: hsla(var(--hue-accent), 90%, 50%, 0.2);
+  --accent-secondary: hsl(var(--hue-cyan), 95%, 35%);
+  --accent-secondary-glow: hsla(var(--hue-cyan), 95%, 35%, 0.15);
+
+  --border-color: hsl(var(--hue-base), 15%, 86%);
+  --border-glow: hsla(var(--hue-accent), 90%, 50%, 0.08);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 25px var(--accent-glow);
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+}

@@ -1,0 +1,41 @@
+.notfound-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  gap: 1.5rem;
+  background-color: var(--bg-primary);
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.notfound-code {
+  font-size: 8rem;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  font-family: var(--font-sans);
+  line-height: 1;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.2));
+  animation: float 6s ease-in-out infinite;
+}
+
+.notfound-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.notfound-desc {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 450px;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
