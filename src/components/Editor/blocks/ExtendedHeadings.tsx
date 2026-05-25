@@ -13,7 +13,7 @@ export const Heading4Block = createReactBlockSpec(
     content: 'inline',
   },
   {
-    render: (props) => <h4 ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} style={{ margin: '0.5em 0' }} />,
+    render: (props) => <h4 className="refine-h4" ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} />,
   }
 );
 
@@ -24,7 +24,7 @@ export const Heading5Block = createReactBlockSpec(
     content: 'inline',
   },
   {
-    render: (props) => <h5 ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} style={{ margin: '0.5em 0' }} />,
+    render: (props) => <h5 className="refine-h5" ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} />,
   }
 );
 
@@ -35,6 +35,6 @@ export const Heading6Block = createReactBlockSpec(
     content: 'inline',
   },
   {
-    render: (props) => <h6 ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} style={{ margin: '0.5em 0' }} />,
+    render: (props) => <h6 className="refine-h6" ref={props.contentRef} data-text-alignment={props.block.props.textAlignment} />,
   }
 );

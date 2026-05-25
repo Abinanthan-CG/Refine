@@ -112,3 +112,36 @@
   height: 100%;
 }
 
+/* Extended Headings */
+.refine-blocknote .refine-h4 {
+  font-size: 1.4rem !important;
+  font-weight: 600 !important;
+  margin: 0.5em 0 !important;
+  color: var(--text-primary) !important;
+  line-height: 1.3 !important;
+}
+
+.refine-blocknote .refine-h5 {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  margin: 0.5em 0 !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.3 !important;
+}
+
+.refine-blocknote .refine-h6 {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  margin: 0.5em 0 !important;
+  color: var(--text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.3 !important;
+}
+
+/* Make paragraphs justified unless explicitly centered or right-aligned */
+.refine-blocknote [data-content-type="paragraph"]:not([data-text-alignment="center"]):not([data-text-alignment="right"]) p:not([data-text-alignment="center"]):not([data-text-alignment="right"]) {
+  text-align: justify !important;
+}
+
+
