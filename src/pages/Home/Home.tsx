@@ -29,10 +29,10 @@ export const Home: React.FC = () => {
         <div style={{ padding: '2rem', color: 'red' }}>
           <h2>Editor Crashed!</h2>
           <pre style={{ whiteSpace: 'pre-wrap' }}>{String(error)}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{error.stack}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{(error as Error).stack}</pre>
         </div>
       )}>
-        <Editor key={activePage.id} pageId={activePage.id} initialContent={activePage.content} />
+        <Editor key={activePage.id} pageId={activePage.id} initialContent={activePage.content} title={activePage.title} />
       </ErrorBoundary>
     </div>
   );

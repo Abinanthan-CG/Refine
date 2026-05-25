@@ -28,3 +28,87 @@
   min-height: calc(100vh - 8rem);
   padding-bottom: 30vh; /* Allow scrolling past the bottom block */
 }
+
+/* Custom Title Input */
+.editor-title-input {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 54px; /* Align with BlockNote content (roughly drag handle width) */
+  margin-bottom: 1rem;
+}
+
+.editor-title-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Custom Blocks */
+.refine-quote-block {
+  border-left: 4px solid var(--accent-primary);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.refine-code-block {
+  background-color: var(--bg-tertiary);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.refine-embed-placeholder {
+  background-color: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.refine-embed-placeholder input {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  outline: none;
+}
+
+.refine-embed-placeholder button {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.refine-embed-block {
+  width: 100%;
+  height: 400px;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.refine-embed-block iframe {
+  width: 100%;
+  height: 100%;
+}
+
