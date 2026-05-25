@@ -1,0 +1,30 @@
+.editor-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 4rem 2rem;
+  box-sizing: border-box;
+}
+
+/* Customizing BlockNote variables to map to Refine CSS variables */
+.refine-blocknote {
+  --bn-colors-editor-background: transparent;
+  --bn-colors-editor-text: var(--text-primary);
+  --bn-colors-menu-background: var(--bg-secondary);
+  --bn-colors-menu-text: var(--text-primary);
+  --bn-colors-tooltip-background: var(--bg-tertiary);
+  --bn-colors-tooltip-text: var(--text-primary);
+  --bn-colors-hovered-text-background: hsla(var(--hue-accent), 85%, 60%, 0.1);
+  --bn-colors-selected-text-background: hsla(var(--hue-accent), 85%, 60%, 0.2);
+  --bn-colors-border: var(--border-color);
+  --bn-colors-side-menu: var(--text-muted);
+  --bn-fonts-default: var(--font-sans);
+  
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.refine-blocknote .ProseMirror {
+  min-height: calc(100vh - 8rem);
+  padding-bottom: 30vh; /* Allow scrolling past the bottom block */
+}

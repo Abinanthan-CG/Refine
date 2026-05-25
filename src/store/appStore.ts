@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PartialBlock } from '@blocknote/core';
 
 export type NodeType = 'page' | 'folder';
 
@@ -8,6 +9,7 @@ export interface AppNode {
   title: string;
   parentId: string | null;
   isExpanded?: boolean;
+  content?: PartialBlock[];
 }
 
 interface AppState {
@@ -20,6 +22,7 @@ interface AppState {
   setEditingNodeId: (id: string | null) => void;
   addNode: (node: Omit<AppNode, 'id'>) => string; // Returns the generated ID
   updateNodeTitle: (id: string, newTitle: string) => void;
+  updateNodeContent: (id: string, content: PartialBlock[]) => void;
   deleteNode: (id: string) => void;
   toggleFolder: (id: string) => void;
 }
@@ -78,6 +81,13 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, title: newTitle } : n
+      ),
+    })),
+
+  updateNodeContent: (id, content) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, content } : n
       ),
     })),
 
