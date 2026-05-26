@@ -15,7 +15,9 @@
   font-size: 0.85rem;
   position: relative;
   user-select: none;
-  transition: background-color 0.1s, color 0.1s;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
 }
 
 .tree-node:hover {
@@ -24,8 +26,9 @@
 }
 
 .tree-node.active {
-  background-color: hsla(var(--hue-accent), 85%, 60%, 0.1);
-  color: var(--accent-primary);
+  background-color: var(--accent-glow);
+  color: var(--accent-secondary);
+  border-left: 2px solid var(--accent-primary);
   font-weight: 500;
 }
 

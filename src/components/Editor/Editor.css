@@ -38,23 +38,26 @@
 
 .refine-blocknote .ProseMirror {
   min-height: calc(100vh - 8rem);
-  padding-bottom: 30vh; /* Allow scrolling past the bottom block */
+  padding-bottom: 30vh;
+  color: var(--text-primary);
+  line-height: 1.75;
 }
 
 /* Custom Title Input */
 .editor-title-input {
   width: 100%;
   max-width: 860px;
-  margin: 0 auto 1rem auto;
+  margin: 0 auto 8px auto;
   display: block;
   font-family: var(--font-sans);
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 700;
   color: var(--text-primary);
   background: transparent;
   border: none;
+  border-bottom: 1px solid var(--border-subtle);
   outline: none;
-  padding: 0 54px; /* Align with BlockNote content (roughly drag handle width) */
+  padding: 0 54px 1rem 54px;
   box-sizing: border-box;
 }
 

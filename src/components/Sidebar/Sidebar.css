@@ -2,7 +2,7 @@
   width: 260px;
   height: 100vh;
   background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
@@ -44,6 +44,7 @@
 .workspace-title {
   font-weight: 600;
   font-size: 1rem;
+  color: var(--text-primary);
 }
 
 .icon-btn {
@@ -73,8 +74,8 @@
   align-items: center;
   gap: 0.5rem;
   background-color: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
@@ -85,7 +86,7 @@
 
 .new-page-btn:hover {
   background-color: var(--bg-tertiary);
-  border-color: var(--text-muted);
+  color: var(--text-primary);
 }
 
 .sidebar-content {
@@ -105,7 +106,7 @@
 
 .sidebar-footer {
   padding: 1rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .theme-toggle-inline {
@@ -165,11 +166,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .vault-name {
