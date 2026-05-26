@@ -54,4 +54,5 @@
   align-items: stretch;
   justify-content: flex-start;
   overflow: hidden; /* Let editor wrapper handle scroll */
+  background-color: var(--bg-primary);
 }

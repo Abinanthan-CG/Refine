@@ -2,7 +2,7 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  padding: 4rem 2rem;
+  padding: 48px 2rem 4rem 2rem;
   box-sizing: border-box;
 }
 
@@ -20,8 +20,20 @@
   --bn-colors-side-menu: var(--text-muted);
   --bn-fonts-default: var(--font-sans);
   
-  max-width: 900px;
+  max-width: 860px;
   margin: 0 auto;
+  width: 100%;
+}
+
+/* Override default card/box styling in Mantine/BlockNote container */
+.refine-blocknote,
+.refine-blocknote .bn-container,
+.refine-blocknote .bn-editor {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .refine-blocknote .ProseMirror {
@@ -32,8 +44,8 @@
 /* Custom Title Input */
 .editor-title-input {
   width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
+  max-width: 860px;
+  margin: 0 auto 1rem auto;
   display: block;
   font-family: var(--font-sans);
   font-size: 2.5rem;
@@ -43,7 +55,7 @@
   border: none;
   outline: none;
   padding: 0 54px; /* Align with BlockNote content (roughly drag handle width) */
-  margin-bottom: 1rem;
+  box-sizing: border-box;
 }
 
 .editor-title-input::placeholder {
