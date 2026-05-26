@@ -5,7 +5,7 @@ import { SidebarTree } from './SidebarTree';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
-  const { isSidebarOpen, toggleSidebar, addNode } = useAppStore();
+  const { isSidebarOpen, toggleSidebar, addNode, vaultHandle, vaultName, saveStatus, promptSelectVault } = useAppStore();
   const { isDark, toggleTheme } = useTheme();
 
   const handleNewPage = () => {
@@ -28,13 +28,22 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="sidebar-actions">
-          <button className="new-page-btn" onClick={handleNewPage}>
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>New Page</span>
-          </button>
+          {!vaultHandle ? (
+            <button className="new-page-btn vault-btn" onClick={promptSelectVault}>
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Select Vault Folder</span>
+            </button>
+          ) : (
+            <button className="new-page-btn" onClick={handleNewPage}>
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>New Page</span>
+            </button>
+          )}
         </div>
 
         <div className="sidebar-content">
@@ -42,6 +51,12 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="sidebar-footer">
+          {vaultHandle && (
+            <div className="vault-status" title={`Status: ${saveStatus || 'saved'}`}>
+              <span className={`status-dot ${saveStatus || 'saved'}`}></span>
+              <span className="vault-name">{vaultName || 'Vault'}</span>
+            </div>
+          )}
           <button className="theme-toggle-inline" onClick={toggleTheme}>
             {isDark ? (
               <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16">

@@ -148,3 +148,52 @@
 .expand-btn-floating:hover {
   background-color: var(--bg-tertiary);
 }
+
+.vault-btn {
+  background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.1), rgba(var(--accent-secondary-rgb), 0.1));
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.vault-btn:hover {
+  background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.2), rgba(var(--accent-secondary-rgb), 0.2));
+  border-color: var(--accent-primary);
+}
+
+.vault-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.vault-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+.status-dot.saved {
+  background-color: #10b981; /* Emerald */
+}
+
+.status-dot.saving {
+  background-color: #f59e0b; /* Amber */
+}
+
+.status-dot.error {
+  background-color: #ef4444; /* Red */
+}

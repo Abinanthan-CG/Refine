@@ -32,6 +32,8 @@ interface EditorProps {
 export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title }) => {
   const updateNodeContent = useAppStore((state) => state.updateNodeContent);
   const updateNodeTitle = useAppStore((state) => state.updateNodeTitle);
+  const vaultHandle = useAppStore((state) => state.vaultHandle);
+  const setSaveStatus = useAppStore((state) => state.setSaveStatus);
   const debounceTimerRef = useRef<number | null>(null);
 
   const editor = useCreateBlockNote({
@@ -44,8 +46,29 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       clearTimeout(debounceTimerRef.current);
     }
     
-    debounceTimerRef.current = window.setTimeout(() => {
-      updateNodeContent(pageId, editor.document as any);
+    debounceTimerRef.current = window.setTimeout(async () => {
+      const content = editor.document as any;
+      updateNodeContent(pageId, content);
+      
+      if (vaultHandle) {
+        setSaveStatus('saving');
+        try {
+          const markdown = await editor.blocksToMarkdownLossy(editor.document);
+          const { slugify, saveVaultFile } = await import('../../utils/fileSystem');
+          const currentTitle = useAppStore.getState().nodes.find(n => n.id === pageId)?.title || title;
+          const slug = slugify(currentTitle);
+          
+          await saveVaultFile(vaultHandle, `${slug}.md`, markdown);
+          
+          const jsonContent = JSON.stringify({ title: currentTitle, content }, null, 2);
+          await saveVaultFile(vaultHandle, `${slug}.refine.json`, jsonContent);
+          
+          setSaveStatus('saved');
+        } catch (err) {
+          console.error("Failed to save to vault", err);
+          setSaveStatus('error');
+        }
+      }
     }, 300);
   };
 
