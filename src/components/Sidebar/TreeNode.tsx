@@ -73,30 +73,30 @@ export const TreeNode: React.FC<TreeNodeProps> = ({ node, allNodes, depth }) => 
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (!isFolder) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    if (!isFolder) return;
     e.preventDefault();
     setIsDragOver(true);
   };
 
   const handleDragLeave = () => {
-    if (!isFolder) return;
     setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    if (!isFolder) return;
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (draggedId && draggedId !== node.id) {
-      moveNode(draggedId, node.id);
+      if (isFolder) {
+        moveNode(draggedId, node.id);
+      } else {
+        moveNode(draggedId, node.parentId);
+      }
     }
   };
 
