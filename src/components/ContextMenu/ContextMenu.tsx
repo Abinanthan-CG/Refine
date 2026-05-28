@@ -8,9 +8,11 @@ export const ContextMenu: React.FC = () => {
   const [y, setY] = useState(0);
   const [nodeId, setNodeId] = useState<string | null>(null);
 
-  const { deleteNode, setEditingNodeId, addNode, nodes } = useAppStore();
+  const { deleteNode, setEditingNodeId, addNode, nodes, toggleFavorite } = useAppStore();
   const currentNode = nodes.find(n => n.id === nodeId);
   const isFolder = currentNode?.type === 'folder';
+  const isPage = currentNode?.type === 'page';
+  const isFavorite = currentNode?.isFavorite;
 
   useEffect(() => {
     const handleContextMenu = (e: Event) => {
@@ -77,6 +79,21 @@ export const ContextMenu: React.FC = () => {
             <line x1="9" y1="15" x2="15" y2="15"></line>
           </svg>
           New Page Inside
+        </button>
+      )}
+      {isPage && (
+        <button 
+          className="context-menu-item" 
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(nodeId);
+            setVisible(false);
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
         </button>
       )}
       <div className="context-menu-divider"></div>

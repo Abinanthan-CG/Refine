@@ -3,11 +3,15 @@ import { useAppStore } from '../../store/appStore';
 import { TreeNode } from './TreeNode';
 
 export const SidebarTree: React.FC = () => {
-  const { nodes, moveNode } = useAppStore();
+  const { nodes, moveNode, activePageId, setActivePage } = useAppStore();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const rootNodes = useMemo(() => {
     return nodes.filter(n => n.parentId === null);
+  }, [nodes]);
+
+  const favoritePages = useMemo(() => {
+    return nodes.filter(n => n.type === 'page' && n.isFavorite);
   }, [nodes]);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -42,6 +46,23 @@ export const SidebarTree: React.FC = () => {
       onDrop={handleDrop}
       style={{ minHeight: '100px', paddingBottom: '2rem' }}
     >
+      {favoritePages.length > 0 && (
+        <div className="sidebar-favorites-section">
+          <div className="favorites-header-title">★ Favorites</div>
+          {favoritePages.map(page => (
+            <div 
+              key={`fav-${page.id}`}
+              className={`favorite-item ${activePageId === page.id ? 'active' : ''}`}
+              onClick={() => setActivePage(page.id)}
+            >
+              <span className="favorite-icon">{page.icon || "📄"}</span>
+              <span className="favorite-title">{page.title}</span>
+            </div>
+          ))}
+          <div className="favorites-divider"></div>
+        </div>
+      )}
+
       {rootNodes.length === 0 ? (
         <div className="empty-tree">No pages yet.</div>
       ) : (

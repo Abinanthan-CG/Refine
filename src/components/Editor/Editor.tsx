@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useCreateBlockNote, SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
-import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems } from '@blocknote/core';
+import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems, BlockNoteEditor } from '@blocknote/core';
 import type { PartialBlock } from '@blocknote/core';
 import '@blocknote/mantine/style.css';
 import { useAppStore } from '../../store/appStore';
@@ -29,6 +29,45 @@ interface EditorProps {
   title: string;
 }
 
+function isValidBlockContent(blocks: any): boolean {
+  if (!blocks) return true;
+  if (!Array.isArray(blocks)) return false;
+  
+  try {
+    const checkValue = (val: any): boolean => {
+      if (val === null || val === undefined) return true;
+      if (typeof val === 'number') {
+        return !isNaN(val);
+      }
+      if (typeof val === 'string') {
+        return true;
+      }
+      if (Array.isArray(val)) {
+        return val.every(checkValue);
+      }
+      if (typeof val === 'object') {
+        return Object.values(val).every(checkValue);
+      }
+      return true;
+    };
+
+    for (const block of blocks) {
+      if (!block || typeof block !== 'object') return false;
+      if (!block.id || !block.type) return false;
+      
+      if (block.props && !checkValue(block.props)) return false;
+      if (block.content && !checkValue(block.content)) return false;
+      
+      if (block.children) {
+        if (!isValidBlockContent(block.children)) return false;
+      }
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title }) => {
   const updateNodeContent = useAppStore((state) => state.updateNodeContent);
   const updateNodeTitle = useAppStore((state) => state.updateNodeTitle);
@@ -36,10 +75,34 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
   const setSaveStatus = useAppStore((state) => state.setSaveStatus);
   const debounceTimerRef = useRef<number | null>(null);
 
-  const editor = useCreateBlockNote({
-    schema,
-    initialContent: initialContent && initialContent.length > 0 ? (initialContent as any) : undefined,
-  });
+  const validatedContent = (() => {
+    if (!initialContent || initialContent.length === 0) return undefined;
+    try {
+      if (isValidBlockContent(initialContent)) {
+        return initialContent as any;
+      }
+      console.warn("Malformed blocks or NaN values detected. Dropped initialContent.");
+      return undefined;
+    } catch (e) {
+      console.warn("Failed to validate initialContent. Dropping.", e);
+      return undefined;
+    }
+  })();
+
+  const editor = useMemo(() => {
+    try {
+      return BlockNoteEditor.create({
+        schema,
+        initialContent: validatedContent,
+      });
+    } catch (e) {
+      console.error("BlockNoteEditor.create crashed on initialContent. Falling back to empty editor.", e);
+      return BlockNoteEditor.create({
+        schema,
+        initialContent: undefined,
+      });
+    }
+  }, [pageId, validatedContent]);
 
   const handleChange = () => {
     if (debounceTimerRef.current) {
@@ -64,7 +127,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
           
           await saveVaultFile(dirHandle, `${slug}.md`, markdown);
           
-          const jsonContent = JSON.stringify({ title: node.title || title, icon: node.icon, content }, null, 2);
+          const jsonContent = JSON.stringify({ title: node.title || title, icon: node.icon, isFavorite: node.isFavorite, content }, null, 2);
           await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
           setSaveStatus('saved');

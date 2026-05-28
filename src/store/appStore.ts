@@ -13,6 +13,7 @@ export interface AppNode {
   isExpanded?: boolean;
   content?: PartialBlock[];
   icon?: string;
+  isFavorite?: boolean;
 }
 
 interface AppState {
@@ -35,6 +36,7 @@ interface AppState {
   toggleFolder: (id: string) => void;
   moveNode: (id: string, newParentId: string | null) => void;
   updateNodeIcon: (id: string, icon: string | null) => void;
+  toggleFavorite: (id: string) => void;
   
   initVault: () => Promise<void>;
   promptSelectVault: () => Promise<void>;
@@ -255,6 +257,31 @@ export const useAppStore = create<AppState>((set) => ({
       return {
         nodes: state.nodes.map((n) =>
           n.id === id ? { ...n, icon: icon || undefined } : n
+        ),
+      };
+    });
+  },
+
+  toggleFavorite: (id) => {
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === id);
+      if (node && state.vaultHandle) {
+        const slug = getUniqueSlug(state.nodes, node);
+        getDirHandle(state.vaultHandle, state.nodes, node.parentId)
+          .then(async (dirHandle) => {
+            const sidecarContent = JSON.stringify({
+              title: node.title,
+              icon: node.icon,
+              isFavorite: !node.isFavorite || undefined,
+              content: node.content
+            }, null, 2);
+            await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
+          })
+          .catch((e) => console.warn('Failed to save favorite toggle to disk', e));
+      }
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, isFavorite: !n.isFavorite } : n
         ),
       };
     });

@@ -107,3 +107,59 @@
   border: 1px dashed var(--border-subtle);
   border-radius: 8px;
 }
+
+/* Favorites Section Styles */
+.sidebar-favorites-section {
+  padding: 0 0.5rem 0.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.favorites-header-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem 0.5rem 0.5rem;
+  user-select: none;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+}
+
+.favorite-item:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.favorite-item.active {
+  background-color: var(--accent-glow);
+  color: var(--accent-secondary);
+  font-weight: 500;
+}
+
+.favorite-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorites-divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 0.75rem 0.5rem 0.25rem 0.5rem;
+}
