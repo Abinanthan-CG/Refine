@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { ContextMenu } from '../ContextMenu/ContextMenu';
+import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { useAppStore } from '../../store/appStore';
 import './Layout.css';
 
@@ -20,6 +21,7 @@ export const Layout: React.FC = () => {
         <Outlet />
       </main>
       <ContextMenu />
+      <CommandPalette />
     </div>
   );
 };

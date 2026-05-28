@@ -39,6 +39,17 @@ export const Sidebar: React.FC = () => {
             </button>
           ) : (
             <>
+              <div 
+                className="sidebar-search-trigger" 
+                onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Search...</span>
+                <kbd className="search-hint">Ctrl K</kbd>
+              </div>
               <button className="new-page-btn" onClick={handleNewPage}>
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
