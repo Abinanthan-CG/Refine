@@ -102,7 +102,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
         initialContent: undefined,
       });
     }
-  }, [pageId, validatedContent]);
+  }, [pageId]);
 
   const handleChange = () => {
     if (debounceTimerRef.current) {
@@ -127,7 +127,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
           
           await saveVaultFile(dirHandle, `${slug}.md`, markdown);
           
-          const jsonContent = JSON.stringify({ title: node.title || title, icon: node.icon, isFavorite: node.isFavorite, content }, null, 2);
+          const jsonContent = JSON.stringify({ id: node.id, title: node.title || title, icon: node.icon, isFavorite: node.isFavorite, content }, null, 2);
           await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
           setSaveStatus('saved');
@@ -149,6 +149,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
 
   const node = useAppStore(state => state.nodes.find(n => n.id === pageId));
   const updateNodeIcon = useAppStore(state => state.updateNodeIcon);
+  const setActivePage = useAppStore(state => state.setActivePage);
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -172,6 +173,72 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
     }
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showPicker]);
+
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (anchor) {
+        const href = anchor.getAttribute('href');
+        if (href) {
+          const decHref = decodeURIComponent(href);
+          const matchIndex = decHref.indexOf('refine://');
+          if (matchIndex !== -1) {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetPageId = decHref.slice(matchIndex + 'refine://'.length).split(/[/?#]/)[0];
+            setActivePage(targetPageId);
+          }
+        }
+      }
+    };
+
+    // Override window.open to intercept programmatic link clicks (e.g. from the BlockNote popover Open Link button)
+    const originalOpen = window.open;
+    window.open = function(url, _target, _features) {
+      if (url) {
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        const decUrl = decodeURIComponent(urlStr);
+        const matchIndex = decUrl.indexOf('refine://');
+        if (matchIndex !== -1) {
+          const targetPageId = decUrl.slice(matchIndex + 'refine://'.length).split(/[/?#]/)[0];
+          setActivePage(targetPageId);
+          return null;
+        }
+      }
+      return originalOpen.apply(this, arguments as any);
+    };
+
+    document.addEventListener('click', handleLinkClick, { capture: true });
+    return () => {
+      document.removeEventListener('click', handleLinkClick, { capture: true });
+      window.open = originalOpen;
+    };
+  }, [setActivePage]);
+
+
+
+  const getWikilinkItems = (query: string) => {
+    if (!query.startsWith('[')) return [];
+    const filterQuery = query.slice(1).toLowerCase();
+    
+    const pages = useAppStore.getState().nodes.filter(n => n.type === 'page');
+    const filteredPages = pages.filter(p => p.title.toLowerCase().includes(filterQuery)).slice(0, 6);
+    
+    return filteredPages.map(page => ({
+      title: page.title,
+      icon: <span style={{ fontSize: '0.95rem' }}>{page.icon || "📄"}</span>,
+      onItemClick: () => {
+        editor.insertInlineContent([
+          {
+            type: "link",
+            content: [{ type: "text", text: page.title, styles: {} }],
+            href: `refine://${page.id}`,
+          },
+        ]);
+      }
+    }));
+  };
 
   return (
     <div className="editor-wrapper">
@@ -320,6 +387,10 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
               query
             )
           }
+        />
+        <SuggestionMenuController
+          triggerCharacter={"["}
+          getItems={async (query) => getWikilinkItems(query)}
         />
       </BlockNoteView>
     </div>

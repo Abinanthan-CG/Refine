@@ -246,8 +246,10 @@ export const useAppStore = create<AppState>((set) => ({
         getDirHandle(state.vaultHandle, state.nodes, node.parentId)
           .then(async (dirHandle) => {
             const sidecarContent = JSON.stringify({
+              id: node.id,
               title: node.title,
               icon: icon || undefined,
+              isFavorite: node.isFavorite,
               content: node.content
             }, null, 2);
             await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
@@ -270,6 +272,7 @@ export const useAppStore = create<AppState>((set) => ({
         getDirHandle(state.vaultHandle, state.nodes, node.parentId)
           .then(async (dirHandle) => {
             const sidecarContent = JSON.stringify({
+              id: node.id,
               title: node.title,
               icon: node.icon,
               isFavorite: !node.isFavorite || undefined,

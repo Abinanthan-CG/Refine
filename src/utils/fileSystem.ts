@@ -141,7 +141,7 @@ async function walkDirectory(
         const parsed = JSON.parse(text);
         
         nodes.push({
-          id: generateId(),
+          id: parsed.id || generateId(),
           type: 'page',
           title: parsed.title || slug,
           icon: parsed.icon,
