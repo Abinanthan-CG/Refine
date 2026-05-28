@@ -8,7 +8,9 @@ export const ContextMenu: React.FC = () => {
   const [y, setY] = useState(0);
   const [nodeId, setNodeId] = useState<string | null>(null);
 
-  const { deleteNode, setEditingNodeId, addNode } = useAppStore();
+  const { deleteNode, setEditingNodeId, addNode, nodes } = useAppStore();
+  const currentNode = nodes.find(n => n.id === nodeId);
+  const isFolder = currentNode?.type === 'folder';
 
   useEffect(() => {
     const handleContextMenu = (e: Event) => {
@@ -66,15 +68,17 @@ export const ContextMenu: React.FC = () => {
         </svg>
         Rename
       </button>
-      <button className="context-menu-item" onClick={handleNewPageInside}>
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="12" y1="18" x2="12" y2="12"></line>
-          <line x1="9" y1="15" x2="15" y2="15"></line>
-        </svg>
-        New Page Inside
-      </button>
+      {isFolder && (
+        <button className="context-menu-item" onClick={handleNewPageInside}>
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          New Page Inside
+        </button>
+      )}
       <div className="context-menu-divider"></div>
       <button className="context-menu-item danger" onClick={handleDelete}>
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">

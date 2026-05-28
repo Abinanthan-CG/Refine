@@ -54,14 +54,18 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
         setSaveStatus('saving');
         try {
           const markdown = await editor.blocksToMarkdownLossy(editor.document);
-          const { slugify, saveVaultFile } = await import('../../utils/fileSystem');
-          const currentTitle = useAppStore.getState().nodes.find(n => n.id === pageId)?.title || title;
-          const slug = slugify(currentTitle);
+          const { getUniqueSlug, saveVaultFile, getDirHandle } = await import('../../utils/fileSystem');
+          const state = useAppStore.getState();
+          const node = state.nodes.find(n => n.id === pageId);
+          if (!node) return;
+          const slug = getUniqueSlug(state.nodes, node);
           
-          await saveVaultFile(vaultHandle, `${slug}.md`, markdown);
+          const dirHandle = await getDirHandle(vaultHandle, state.nodes, node?.parentId || null);
           
-          const jsonContent = JSON.stringify({ title: currentTitle, content }, null, 2);
-          await saveVaultFile(vaultHandle, `${slug}.refine.json`, jsonContent);
+          await saveVaultFile(dirHandle, `${slug}.md`, markdown);
+          
+          const jsonContent = JSON.stringify({ title: node.title || title, content }, null, 2);
+          await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
           setSaveStatus('saved');
         } catch (err) {

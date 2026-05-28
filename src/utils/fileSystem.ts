@@ -5,12 +5,84 @@ export function slugify(text: string): string {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '') // Remove non-word chars
-    .replace(/[\s_-]+/g, '-') // Swap spaces and underscores for hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export const generateId = () => Math.random().toString(36).substring(2, 9);
+
+export function getUniqueSlug(nodes: AppNode[], node: AppNode): string {
+  const baseSlug = slugify(node.title) || 'untitled';
+  let slug = baseSlug;
+  let counter = 1;
+  
+  const siblings = nodes.filter(
+    n => n.id !== node.id && n.parentId === node.parentId && n.type === 'page'
+  );
+  
+  while (siblings.some(s => slugify(s.title) === slug)) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  return slug;
+}
+
+export function getUniqueFolderTitle(
+  nodes: AppNode[],
+  title: string,
+  parentId: string | null,
+  excludeId?: string
+): string {
+  const baseTitle = title.trim() || 'Untitled Folder';
+  let uniqueTitle = baseTitle;
+  let counter = 1;
+  
+  const siblings = nodes.filter(
+    n => n.id !== excludeId && n.parentId === parentId && n.type === 'folder'
+  );
+  
+  while (siblings.some(s => s.title.toLowerCase() === uniqueTitle.toLowerCase())) {
+    uniqueTitle = `${baseTitle} ${counter}`;
+    counter++;
+  }
+  return uniqueTitle;
+}
+
+async function copyDirectory(
+  srcDir: FileSystemDirectoryHandle,
+  destParentDir: FileSystemDirectoryHandle,
+  newName: string
+): Promise<FileSystemDirectoryHandle> {
+  const destDir = await destParentDir.getDirectoryHandle(newName, { create: true });
+  for await (const entry of (srcDir as any).values()) {
+    if (entry.kind === 'directory') {
+      await copyDirectory(entry as FileSystemDirectoryHandle, destDir, entry.name);
+    } else if (entry.kind === 'file') {
+      const srcFileHandle = entry as FileSystemFileHandle;
+      const destFileHandle = await destDir.getFileHandle(entry.name, { create: true });
+      
+      const file = await srcFileHandle.getFile();
+      const writable = await destFileHandle.createWritable();
+      await writable.write(file);
+      await writable.close();
+    }
+  }
+  return destDir;
+}
+
+export async function getDirHandle(
+  vaultHandle: FileSystemDirectoryHandle,
+  nodes: AppNode[],
+  nodeId: string | null
+): Promise<FileSystemDirectoryHandle> {
+  if (!nodeId) return vaultHandle;
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return vaultHandle;
+
+  const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
+  return await parentHandle.getDirectoryHandle(node.title, { create: true });
+}
 
 export async function saveVaultFile(
   dirHandle: FileSystemDirectoryHandle,
@@ -34,58 +106,164 @@ export async function deleteVaultFile(
   }
 }
 
-export async function readAllVaultNodes(dirHandle: FileSystemDirectoryHandle): Promise<AppNode[]> {
+async function walkDirectory(
+  dirHandle: FileSystemDirectoryHandle,
+  parentId: string | null
+): Promise<AppNode[]> {
   const nodes: AppNode[] = [];
-  const files = new Map<string, FileSystemFileHandle>();
-  
+  const entries = [];
+
   for await (const entry of (dirHandle as any).values()) {
-    if (entry.kind === 'file') {
-      files.set(entry.name, entry as FileSystemFileHandle);
+    entries.push(entry);
+  }
+
+  for (const entry of entries) {
+    if (entry.kind === 'directory') {
+      const folderId = generateId();
+      nodes.push({
+        id: folderId,
+        type: 'folder',
+        title: entry.name,
+        parentId,
+      });
+      const children = await walkDirectory(entry as FileSystemDirectoryHandle, folderId);
+      nodes.push(...children);
     }
   }
 
-  for (const [name, handle] of files.entries()) {
-    if (name.endsWith('.md')) {
-      const slug = name.replace('.md', '');
-      const jsonName = `${slug}.refine.json`;
-      
-      let title = slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '); // Capitalize slug as fallback title
-      let contentJson = undefined;
-      
+  for (const entry of entries) {
+    if (entry.kind === 'file' && entry.name.endsWith('.refine.json') && entry.name !== '_refine.manifest.json') {
+      const slug = entry.name.replace('.refine.json', '');
       try {
-        if (files.has(jsonName)) {
-          const jsonFile = await files.get(jsonName)!.getFile();
-          const jsonText = await jsonFile.text();
-          const parsed = JSON.parse(jsonText);
-          title = parsed.title || title;
-          contentJson = parsed.content;
-        } else {
-          // Only MD file exists.
-          // BlockNoteEditor has a tryParseMarkdownToBlocks which will be used in Editor if content is undefined.
-          // But actually, if we want to store raw markdown in the node, we can't cleanly, as `content` is PartialBlock[].
-          // We will just leave content undefined, and when the Editor loads it, it will be empty.
-          // In a real app we'd parse the markdown file here or in a helper.
-          // Let's at least grab the title if it starts with #
-          const mdFile = await handle.getFile();
-          const mdText = await mdFile.text();
-          const firstLine = mdText.split('\n')[0];
-          if (firstLine && firstLine.startsWith('# ')) {
-             title = firstLine.substring(2).trim();
-          }
-        }
+        const fileHandle = entry as FileSystemFileHandle;
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const parsed = JSON.parse(text);
         
         nodes.push({
           id: generateId(),
           type: 'page',
-          title: title,
-          parentId: null, // Flat structure
-          content: contentJson,
+          title: parsed.title || slug,
+          parentId,
+          content: parsed.content,
         });
       } catch (err) {
-        console.error(`Error loading node for ${name}`, err);
+        console.error(`Error loading file ${entry.name}`, err);
       }
     }
   }
-
   return nodes;
+}
+
+export async function readAllVaultNodes(dirHandle: FileSystemDirectoryHandle): Promise<AppNode[]> {
+  try {
+    await dirHandle.removeEntry('_refine.manifest.json');
+  } catch (e) {}
+
+  return await walkDirectory(dirHandle, null);
+}
+
+export async function createFolderOnDisk(
+  vaultHandle: FileSystemDirectoryHandle,
+  nodes: AppNode[],
+  parentId: string | null,
+  folderName: string
+): Promise<void> {
+  const parentHandle = await getDirHandle(vaultHandle, nodes, parentId);
+  await parentHandle.getDirectoryHandle(folderName, { create: true });
+}
+
+export async function renameNodeOnDisk(
+  vaultHandle: FileSystemDirectoryHandle,
+  nodes: AppNode[],
+  node: AppNode,
+  newTitle: string
+): Promise<void> {
+  const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
+  
+  if (node.type === 'folder') {
+    try {
+      const srcDir = await parentHandle.getDirectoryHandle(node.title);
+      await copyDirectory(srcDir, parentHandle, newTitle);
+      await parentHandle.removeEntry(node.title, { recursive: true });
+    } catch (e) {
+      console.warn("Folder rename failed", e);
+    }
+  } else {
+    try {
+      const oldSlug = getUniqueSlug(nodes, node);
+      const tempNode = { ...node, title: newTitle };
+      const newSlug = getUniqueSlug(nodes, tempNode);
+      
+      if (oldSlug !== newSlug) {
+        const jsonHandle = await parentHandle.getFileHandle(`${oldSlug}.refine.json`);
+        await (jsonHandle as any).move(`${newSlug}.refine.json`);
+        
+        try {
+          const mdHandle = await parentHandle.getFileHandle(`${oldSlug}.md`);
+          await (mdHandle as any).move(`${newSlug}.md`);
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("Native file rename failed", e);
+    }
+  }
+}
+
+export async function moveNodeOnDisk(
+  vaultHandle: FileSystemDirectoryHandle,
+  nodes: AppNode[],
+  node: AppNode,
+  oldParentId: string | null,
+  newParentId: string | null,
+  newTitle?: string
+): Promise<void> {
+  const oldParentHandle = await getDirHandle(vaultHandle, nodes, oldParentId);
+  const newParentHandle = await getDirHandle(vaultHandle, nodes, newParentId);
+  const targetTitle = newTitle || node.title;
+  
+  if (node.type === 'folder') {
+    try {
+      const srcDir = await oldParentHandle.getDirectoryHandle(node.title);
+      await copyDirectory(srcDir, newParentHandle, targetTitle);
+      await oldParentHandle.removeEntry(node.title, { recursive: true });
+    } catch (e) {
+      console.warn("Folder move failed", e);
+    }
+  } else {
+    try {
+      const oldSlug = getUniqueSlug(nodes, node);
+      const tempNode = { ...node, parentId: newParentId, title: targetTitle };
+      const newSlug = getUniqueSlug(nodes, tempNode);
+      
+      const jsonHandle = await oldParentHandle.getFileHandle(`${oldSlug}.refine.json`);
+      await (jsonHandle as any).move(newParentHandle, `${newSlug}.refine.json`);
+      
+      try {
+        const mdHandle = await oldParentHandle.getFileHandle(`${oldSlug}.md`);
+        await (mdHandle as any).move(newParentHandle, `${newSlug}.md`);
+      } catch (e) {}
+    } catch (e) {
+      console.warn("Native file move failed", e);
+    }
+  }
+}
+
+export async function deleteNodeOnDisk(
+  vaultHandle: FileSystemDirectoryHandle,
+  nodes: AppNode[],
+  node: AppNode
+): Promise<void> {
+  const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
+  if (node.type === 'folder') {
+    try {
+      await parentHandle.removeEntry(node.title, { recursive: true });
+    } catch (e) {
+      console.warn("Failed to delete folder", e);
+    }
+  } else {
+    const slug = getUniqueSlug(nodes, node);
+    deleteVaultFile(parentHandle, `${slug}.refine.json`);
+    deleteVaultFile(parentHandle, `${slug}.md`);
+  }
 }

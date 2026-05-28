@@ -1,23 +1,54 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { TreeNode } from './TreeNode';
 
 export const SidebarTree: React.FC = () => {
-  const nodes = useAppStore((state) => state.nodes);
+  const { nodes, moveNode } = useAppStore();
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const rootNodes = useMemo(() => {
     return nodes.filter(n => n.parentId === null);
   }, [nodes]);
 
-  if (rootNodes.length === 0) {
-    return <div className="empty-tree">No pages yet.</div>;
-  }
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (draggedId) {
+      moveNode(draggedId, null);
+    }
+  };
 
   return (
-    <div className="sidebar-tree">
-      {rootNodes.map(node => (
-        <TreeNode key={node.id} node={node} allNodes={nodes} depth={0} />
-      ))}
+    <div 
+      className={`sidebar-tree ${isDragOver ? 'drag-over-root' : ''}`}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{ minHeight: '100px', paddingBottom: '2rem' }}
+    >
+      {rootNodes.length === 0 ? (
+        <div className="empty-tree">No pages yet.</div>
+      ) : (
+        rootNodes.map(node => (
+          <TreeNode key={node.id} node={node} allNodes={nodes} depth={0} />
+        ))
+      )}
     </div>
   );
 };

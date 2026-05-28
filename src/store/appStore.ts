@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { PartialBlock } from '@blocknote/core';
 import { getVaultHandle, setVaultHandle } from '../utils/indexedDB';
-import { readAllVaultNodes, slugify, deleteVaultFile, generateId } from '../utils/fileSystem';
+import { readAllVaultNodes, generateId, createFolderOnDisk, renameNodeOnDisk, moveNodeOnDisk, deleteNodeOnDisk, getUniqueFolderTitle } from '../utils/fileSystem';
 
 export type NodeType = 'page' | 'folder';
 
@@ -32,6 +32,7 @@ interface AppState {
   updateNodeContent: (id: string, content: PartialBlock[]) => void;
   deleteNode: (id: string) => void;
   toggleFolder: (id: string) => void;
+  moveNode: (id: string, newParentId: string | null) => void;
   
   initVault: () => Promise<void>;
   promptSelectVault: () => Promise<void>;
@@ -52,7 +53,7 @@ const getDescendantIds = (nodes: AppNode[], parentId: string): string[] => {
 // Start with empty nodes, they will be loaded from Vault
 const initialNodes: AppNode[] = [];
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>((set) => ({
   isSidebarOpen: true,
   activePageId: null,
   editingNodeId: null,
@@ -118,33 +119,44 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addNode: (nodeData) => {
     const newId = generateId();
-    const newNode: AppNode = { ...nodeData, id: newId };
-    set((state) => ({
-      nodes: [...state.nodes, newNode],
-      activePageId: newId, // Auto-focus new node
-    }));
+    let newNode: AppNode = { ...nodeData, id: newId };
+    
+    set((state) => {
+      if (newNode.type === 'folder') {
+        const uniqueTitle = getUniqueFolderTitle(state.nodes, newNode.title, newNode.parentId);
+        newNode = { ...newNode, title: uniqueTitle };
+        if (state.vaultHandle) {
+          createFolderOnDisk(state.vaultHandle, state.nodes, newNode.parentId, newNode.title).catch(e => console.warn(e));
+        }
+      }
+      return {
+        nodes: [...state.nodes, newNode],
+        activePageId: newId,
+      };
+    });
     return newId;
   },
 
   updateNodeTitle: (id, newTitle) => {
-    const state = get();
-    const oldNode = state.nodes.find((n) => n.id === id);
-    if (oldNode && oldNode.title !== newTitle && state.vaultHandle && oldNode.type === 'page') {
-      const oldSlug = slugify(oldNode.title);
-      const newSlug = slugify(newTitle);
-      
-      // If the slug actually changes, delete old files
-      if (oldSlug !== newSlug) {
-        deleteVaultFile(state.vaultHandle, `${oldSlug}.md`);
-        deleteVaultFile(state.vaultHandle, `${oldSlug}.refine.json`);
-      }
-    }
+    set((state) => {
+      const oldNode = state.nodes.find((n) => n.id === id);
+      if (!oldNode) return state;
 
-    set((state) => ({
-      nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, title: newTitle } : n
-      ),
-    }));
+      let titleToUse = newTitle;
+      if (oldNode.type === 'folder') {
+        titleToUse = getUniqueFolderTitle(state.nodes, newTitle, oldNode.parentId, id);
+      }
+
+      if (oldNode.title !== titleToUse && state.vaultHandle) {
+        renameNodeOnDisk(state.vaultHandle, state.nodes, oldNode, titleToUse).catch(e => console.warn(e));
+      }
+
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, title: titleToUse } : n
+        ),
+      };
+    });
   },
 
   updateNodeContent: (id, content) =>
@@ -155,16 +167,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     })),
 
   deleteNode: (id) => {
-    const state = get();
-    const nodeToDelete = state.nodes.find((n) => n.id === id);
-    if (nodeToDelete && state.vaultHandle && nodeToDelete.type === 'page') {
-      const slug = slugify(nodeToDelete.title);
-      deleteVaultFile(state.vaultHandle, `${slug}.md`);
-      deleteVaultFile(state.vaultHandle, `${slug}.refine.json`);
-    }
-
     set((state) => {
+      const nodeToDelete = state.nodes.find((n) => n.id === id);
       if (!nodeToDelete) return state;
+
+      if (state.vaultHandle) {
+        deleteNodeOnDisk(state.vaultHandle, state.nodes, nodeToDelete).catch(e => console.warn(e));
+      }
 
       const idsToDelete = [id];
       if (nodeToDelete.type === 'folder') {
@@ -188,4 +197,42 @@ export const useAppStore = create<AppState>((set, get) => ({
           : n
       ),
     })),
+
+  moveNode: (id, newParentId) => {
+    set((state) => {
+      const nodeToMove = state.nodes.find(n => n.id === id);
+      if (!nodeToMove) return state;
+      
+      if (id === newParentId) return state;
+      if (nodeToMove.parentId === newParentId) return state;
+
+      if (nodeToMove.type === 'folder' && newParentId !== null) {
+        let currentParent = state.nodes.find(n => n.id === newParentId);
+        while (currentParent) {
+          if (currentParent.id === id) {
+            console.warn('Cannot move folder into its own descendant');
+            return state;
+          }
+          currentParent = state.nodes.find(n => n.id === currentParent?.parentId);
+        }
+      }
+
+      let finalTitle = nodeToMove.title;
+      if (nodeToMove.type === 'folder') {
+        finalTitle = getUniqueFolderTitle(state.nodes, nodeToMove.title, newParentId, id);
+      }
+
+      if (state.vaultHandle) {
+        moveNodeOnDisk(state.vaultHandle, state.nodes, nodeToMove, nodeToMove.parentId, newParentId, finalTitle).catch(e => console.warn(e));
+      }
+
+      return {
+        nodes: state.nodes.map(n => 
+          n.id === id ? { ...n, parentId: newParentId, title: finalTitle } : n
+        )
+      };
+    });
+  },
 }));
+
+

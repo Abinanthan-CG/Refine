@@ -9,8 +9,9 @@ interface TreeNodeProps {
 }
 
 export const TreeNode: React.FC<TreeNodeProps> = ({ node, allNodes, depth }) => {
-  const { activePageId, setActivePage, toggleFolder, updateNodeTitle, editingNodeId, setEditingNodeId } = useAppStore();
+  const { activePageId, setActivePage, toggleFolder, updateNodeTitle, editingNodeId, setEditingNodeId, moveNode } = useAppStore();
   const [editTitle, setEditTitle] = useState(node.title);
+  const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFolder = node.type === 'folder';
@@ -66,14 +67,53 @@ export const TreeNode: React.FC<TreeNodeProps> = ({ node, allNodes, depth }) => 
     window.dispatchEvent(event);
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', node.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!isFolder) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!isFolder) return;
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    if (!isFolder) return;
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!isFolder) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (draggedId && draggedId !== node.id) {
+      moveNode(draggedId, node.id);
+    }
+  };
+
   return (
     <>
       <div 
-        className={`tree-node ${isActive ? 'active' : ''} ${isFolder ? 'folder' : 'page'}`}
+        className={`tree-node ${isActive ? 'active' : ''} ${isFolder ? 'folder' : 'page'} ${isDragOver ? 'drag-over' : ''}`}
         style={{ paddingLeft: `${depth * 12 + 16}px` }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
+        draggable={true}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <div className="node-icon">
           {isFolder ? (
