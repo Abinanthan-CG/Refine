@@ -123,6 +123,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({ node, allNodes, depth }) => 
             >
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
+          ) : node.icon ? (
+            <span className="node-emoji-icon">{node.icon}</span>
           ) : (
             <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useCreateBlockNote, SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems } from '@blocknote/core';
@@ -64,7 +64,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
           
           await saveVaultFile(dirHandle, `${slug}.md`, markdown);
           
-          const jsonContent = JSON.stringify({ title: node.title || title, content }, null, 2);
+          const jsonContent = JSON.stringify({ title: node.title || title, icon: node.icon, content }, null, 2);
           await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
           setSaveStatus('saved');
@@ -84,8 +84,82 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
     };
   }, []);
 
+  const node = useAppStore(state => state.nodes.find(n => n.id === pageId));
+  const updateNodeIcon = useAppStore(state => state.updateNodeIcon);
+  const [showPicker, setShowPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  const emojis = [
+    "📝", "📄", "📁", "📂", "📚", "📓", "✏️", "✒️", "✍️", "📖",
+    "💡", "🧠", "🎯", "⚡", "🌟", "🔥", "🔮", "🧪", "🔍", "🧩",
+    "💼", "📅", "✅", "⏳", "📈", "📊", "📌", "🏷️", "🔑", "🔒",
+    "🏠", "🧘", "🍽️", "💪", "🌱", "☕", "🧗", "🏃", "🛌", "🔋",
+    "🎨", "🎬", "🎸", "🎮", "📷", "✈️", "🚀", "🌍", "🗺️", "🎭",
+    "💻", "📱", "💾", "🔌", "⚙️", "🛠️", "🛸", "🤖", "👾", "✨"
+  ];
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+      }
+    };
+    if (showPicker) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showPicker]);
+
   return (
     <div className="editor-wrapper">
+      <div className="editor-icon-section">
+        {node?.icon ? (
+          <div className="editor-icon-display" onClick={() => setShowPicker(true)} title="Change icon">
+            {node.icon}
+          </div>
+        ) : (
+          <button className="editor-add-icon-btn" onClick={() => setShowPicker(true)}>
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>Add icon</span>
+          </button>
+        )}
+
+        {showPicker && (
+          <div className="emoji-picker-panel" ref={pickerRef}>
+            <div className="emoji-picker-header">
+              <span>Select Icon</span>
+              {node?.icon && (
+                <button 
+                  className="emoji-picker-remove-btn" 
+                  onClick={() => {
+                    updateNodeIcon(pageId, null);
+                    setShowPicker(false);
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <div className="emoji-picker-grid">
+              {emojis.map((emoji) => (
+                <button
+                  key={emoji}
+                  className="emoji-picker-btn"
+                  onClick={() => {
+                    updateNodeIcon(pageId, emoji);
+                    setShowPicker(false);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <input
         type="text"
         className="editor-title-input"

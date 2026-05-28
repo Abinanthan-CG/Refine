@@ -45,6 +45,13 @@
   opacity: 1;
 }
 
+.node-emoji-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  display: inline-block;
+  user-select: none;
+}
+
 .folder-arrow {
   transition: transform 0.2s ease;
 }

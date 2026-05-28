@@ -159,4 +159,129 @@
   text-align: justify !important;
 }
 
+/* Emoji Icon System */
+.editor-icon-section {
+  max-width: 860px;
+  margin: 0 auto 0.5rem auto;
+  padding: 0 54px;
+  box-sizing: border-box;
+  position: relative;
+  height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+.editor-icon-display {
+  font-size: 3rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease;
+  margin-top: -10px;
+}
+
+.editor-icon-display:hover {
+  transform: scale(1.08);
+}
+
+.editor-add-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.editor-icon-section:hover .editor-add-icon-btn {
+  opacity: 1;
+}
+
+.editor-add-icon-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.emoji-picker-panel {
+  position: absolute;
+  top: 50px;
+  left: 54px;
+  width: 320px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.emoji-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.emoji-picker-remove-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.emoji-picker-remove-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  padding: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.emoji-picker-grid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.emoji-picker-grid::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 2px;
+}
+
+.emoji-picker-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+.emoji-picker-btn:hover {
+  background-color: var(--bg-tertiary);
+  transform: scale(1.15);
+}
+
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { PartialBlock } from '@blocknote/core';
 import { getVaultHandle, setVaultHandle } from '../utils/indexedDB';
-import { readAllVaultNodes, generateId, createFolderOnDisk, renameNodeOnDisk, moveNodeOnDisk, deleteNodeOnDisk, getUniqueFolderTitle } from '../utils/fileSystem';
+import { readAllVaultNodes, generateId, createFolderOnDisk, renameNodeOnDisk, moveNodeOnDisk, deleteNodeOnDisk, getUniqueFolderTitle, getUniqueSlug, getDirHandle, saveVaultFile } from '../utils/fileSystem';
 
 export type NodeType = 'page' | 'folder';
 
@@ -12,6 +12,7 @@ export interface AppNode {
   parentId: string | null;
   isExpanded?: boolean;
   content?: PartialBlock[];
+  icon?: string;
 }
 
 interface AppState {
@@ -33,6 +34,7 @@ interface AppState {
   deleteNode: (id: string) => void;
   toggleFolder: (id: string) => void;
   moveNode: (id: string, newParentId: string | null) => void;
+  updateNodeIcon: (id: string, icon: string | null) => void;
   
   initVault: () => Promise<void>;
   promptSelectVault: () => Promise<void>;
@@ -230,6 +232,30 @@ export const useAppStore = create<AppState>((set) => ({
         nodes: state.nodes.map(n => 
           n.id === id ? { ...n, parentId: newParentId, title: finalTitle } : n
         )
+      };
+    });
+  },
+
+  updateNodeIcon: (id, icon) => {
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === id);
+      if (node && state.vaultHandle) {
+        const slug = getUniqueSlug(state.nodes, node);
+        getDirHandle(state.vaultHandle, state.nodes, node.parentId)
+          .then(async (dirHandle) => {
+            const sidecarContent = JSON.stringify({
+              title: node.title,
+              icon: icon || undefined,
+              content: node.content
+            }, null, 2);
+            await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
+          })
+          .catch((e) => console.warn('Failed to save icon to disk', e));
+      }
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, icon: icon || undefined } : n
+        ),
       };
     });
   },

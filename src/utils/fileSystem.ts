@@ -144,6 +144,7 @@ async function walkDirectory(
           id: generateId(),
           type: 'page',
           title: parsed.title || slug,
+          icon: parsed.icon,
           parentId,
           content: parsed.content,
         });
