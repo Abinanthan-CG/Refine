@@ -162,13 +162,147 @@
   border-color: var(--accent-primary);
 }
 
+.vault-status-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .vault-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.6rem;
   font-size: 0.75rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.vault-status:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.vault-chevron {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.vault-status:hover .vault-chevron {
+  opacity: 1;
+}
+
+.vault-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popover-fade-in 0.15s ease-out;
+}
+
+@keyframes popover-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vault-popover-header {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.vault-popover-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vault-popover-content {
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.vault-popover-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-label {
+  font-size: 0.65rem;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.info-value {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vault-popover-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.popover-btn {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.popover-btn:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.popover-btn.primary-btn {
+  background: var(--accent-glow);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--accent-secondary);
+}
+
+.popover-btn.primary-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: var(--accent-secondary);
+  color: var(--text-primary);
 }
 
 .vault-name {

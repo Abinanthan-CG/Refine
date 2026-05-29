@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { SidebarTree } from './SidebarTree';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { isSidebarOpen, toggleSidebar, addNode, vaultHandle, vaultName, saveStatus, promptSelectVault } = useAppStore();
+  const [showVaultPopover, setShowVaultPopover] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setShowVaultPopover(false);
+      }
+    };
+    if (showVaultPopover) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showVaultPopover]);
 
   const handleNewPage = () => {
     addNode({ type: 'page', title: 'Untitled', parentId: null });
@@ -75,9 +89,65 @@ export const Sidebar: React.FC = () => {
 
         <div className="sidebar-footer">
           {vaultHandle && (
-            <div className="vault-status" title={`Status: ${saveStatus || 'saved'}`}>
-              <span className={`status-dot ${saveStatus || 'saved'}`}></span>
-              <span className="vault-name">{vaultName || 'Vault'}</span>
+            <div className="vault-status-wrapper">
+              <div 
+                className="vault-status" 
+                onClick={() => setShowVaultPopover(!showVaultPopover)}
+                title="Vault details & management"
+              >
+                <span className={`status-dot ${saveStatus || 'saved'}`}></span>
+                <span className="vault-name">{vaultName || 'Vault'}</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none" className="vault-chevron">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {showVaultPopover && (
+                <div className="vault-popover" ref={popoverRef}>
+                  <div className="vault-popover-header">
+                    <span className="vault-popover-title">Vault Information</span>
+                  </div>
+                  <div className="vault-popover-content">
+                    <div className="vault-popover-info">
+                      <div className="info-label">Active Folder</div>
+                      <div className="info-value" title={vaultName || ''}>
+                        📁 {vaultName}
+                      </div>
+                    </div>
+                    <div className="vault-popover-actions">
+                      <button 
+                        className="popover-btn primary-btn"
+                        onClick={async () => {
+                          await promptSelectVault();
+                          setShowVaultPopover(false);
+                        }}
+                      >
+                        Change Vault
+                      </button>
+                      <button 
+                        className="popover-btn"
+                        onClick={() => {
+                          if (vaultName) {
+                            navigator.clipboard.writeText(vaultName);
+                            // Visual feedback
+                            const btn = document.getElementById('copy-vault-btn');
+                            if (btn) {
+                              const origText = btn.innerText;
+                              btn.innerText = 'Copied!';
+                              setTimeout(() => {
+                                btn.innerText = origText;
+                              }, 1500);
+                            }
+                          }
+                        }}
+                        id="copy-vault-btn"
+                      >
+                        Copy Name
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
