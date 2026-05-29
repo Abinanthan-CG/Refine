@@ -180,16 +180,12 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
       if (anchor) {
-        const href = anchor.getAttribute('href') || anchor.href;
-        if (href) {
-          const decHref = decodeURIComponent(href);
-          const matchIndex = decHref.indexOf('refine://');
-          if (matchIndex !== -1) {
-            e.preventDefault();
-            e.stopPropagation();
-            const targetPageId = decHref.slice(matchIndex + 'refine://'.length).split(/[/?#]/)[0];
-            setActivePage(targetPageId);
-          }
+        const href = anchor.getAttribute('href');
+        if (href && href.startsWith('#refine-')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const pageId = href.replace('#refine-', '');
+          setActivePage(pageId);
         }
       }
     };
@@ -200,9 +196,9 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       if (url) {
         const urlStr = typeof url === 'string' ? url : url.toString();
         const decUrl = decodeURIComponent(urlStr);
-        const matchIndex = decUrl.indexOf('refine://');
+        const matchIndex = decUrl.indexOf('#refine-');
         if (matchIndex !== -1) {
-          const targetPageId = decUrl.slice(matchIndex + 'refine://'.length).split(/[/?#]/)[0];
+          const targetPageId = decUrl.slice(matchIndex + '#refine-'.length).split(/[/?#]/)[0];
           setActivePage(targetPageId);
           return null;
         }
@@ -239,7 +235,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
           {
             type: "link",
             content: [{ type: "text", text: page.title, styles: {} }],
-            href: `refine://${page.id}`,
+            href: `#refine-${page.id}`,
           },
         ]);
       }
@@ -314,10 +310,10 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
         className="refine-blocknote-wrapper"
         onClickCapture={(e) => {
           const anchor = (e.target as HTMLElement).closest('a');
-          if (anchor?.href?.includes('refine://')) {
+          if (anchor?.href?.includes('#refine-')) {
             e.preventDefault();
             e.stopPropagation();
-            const pageId = anchor.href.split('refine://')[1];
+            const pageId = anchor.href.split('#refine-')[1];
             setActivePage(pageId);
           }
         }}
