@@ -152,6 +152,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
   const setActivePage = useAppStore(state => state.setActivePage);
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const emojis = [
     "📝", "📄", "📁", "📂", "📚", "📓", "✏️", "✒️", "✍️", "📖",
@@ -179,7 +180,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
       if (anchor) {
-        const href = anchor.getAttribute('href');
+        const href = anchor.getAttribute('href') || anchor.href;
         if (href) {
           const decHref = decodeURIComponent(href);
           const matchIndex = decHref.indexOf('refine://');
@@ -209,9 +210,14 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       return originalOpen.apply(this, arguments as any);
     };
 
-    document.addEventListener('click', handleLinkClick, { capture: true });
+    const container = editorContainerRef.current;
+    if (container) {
+      container.addEventListener('click', handleLinkClick, { capture: true });
+    }
     return () => {
-      document.removeEventListener('click', handleLinkClick, { capture: true });
+      if (container) {
+        container.removeEventListener('click', handleLinkClick, { capture: true });
+      }
       window.open = originalOpen;
     };
   }, [setActivePage]);
@@ -241,7 +247,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
   };
 
   return (
-    <div className="editor-wrapper">
+    <div className="editor-wrapper" ref={editorContainerRef}>
       <div className="editor-icon-section">
         {node?.icon ? (
           <div className="editor-icon-display" onClick={() => setShowPicker(true)} title="Change icon">
@@ -304,95 +310,108 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
         }}
         placeholder="Untitled"
       />
-      <BlockNoteView
-        editor={editor}
-        theme="dark"
-        onChange={handleChange}
-        className="refine-blocknote"
-        slashMenu={false}
-      >
-        <SuggestionMenuController
-          triggerCharacter={"/"}
-          getItems={async (query) =>
-            filterSuggestionItems(
-              [
-                ...getDefaultReactSlashMenuItems(editor),
-                {
-                  title: "Heading 4",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "heading4" } as any], currentBlock, "after");
-                  },
-                  aliases: ["h4", "heading 4"],
-                  group: "Headings",
-                  icon: <span>H4</span>,
-                  subtext: "Used for a medium heading."
-                },
-                {
-                  title: "Heading 5",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "heading5" } as any], currentBlock, "after");
-                  },
-                  aliases: ["h5", "heading 5"],
-                  group: "Headings",
-                  icon: <span>H5</span>,
-                  subtext: "Used for a small heading."
-                },
-                {
-                  title: "Heading 6",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "heading6" } as any], currentBlock, "after");
-                  },
-                  aliases: ["h6", "heading 6"],
-                  group: "Headings",
-                  icon: <span>H6</span>,
-                  subtext: "Used for the smallest heading."
-                },
-                {
-                  title: "Quote",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "quote" } as any], currentBlock, "after");
-                  },
-                  aliases: ["blockquote", "quote"],
-                  group: "Basic blocks",
-                  icon: <span>❞</span>,
-                  subtext: "Insert a quote block."
-                },
-                {
-                  title: "Code Block",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "codeBlock" } as any], currentBlock, "after");
-                  },
-                  aliases: ["code", "pre"],
-                  group: "Basic blocks",
-                  icon: <span>&lt;/&gt;</span>,
-                  subtext: "Insert a code block."
-                },
-                {
-                  title: "Embed",
-                  onItemClick: () => {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.insertBlocks([{ type: "embed" } as any], currentBlock, "after");
-                  },
-                  aliases: ["iframe", "video", "embed"],
-                  group: "Media",
-                  icon: <span>🌐</span>,
-                  subtext: "Embed an external URL."
-                }
-              ],
-              query
-            )
+      <div 
+        className="refine-blocknote-wrapper"
+        onClickCapture={(e) => {
+          const anchor = (e.target as HTMLElement).closest('a');
+          if (anchor?.href?.includes('refine://')) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pageId = anchor.href.split('refine://')[1];
+            setActivePage(pageId);
           }
-        />
-        <SuggestionMenuController
-          triggerCharacter={"["}
-          getItems={async (query) => getWikilinkItems(query)}
-        />
-      </BlockNoteView>
+        }}
+      >
+        <BlockNoteView
+          editor={editor}
+          theme="dark"
+          onChange={handleChange}
+          className="refine-blocknote"
+          slashMenu={false}
+        >
+          <SuggestionMenuController
+            triggerCharacter={"/"}
+            getItems={async (query) =>
+              filterSuggestionItems(
+                [
+                  ...getDefaultReactSlashMenuItems(editor),
+                  {
+                    title: "Heading 4",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "heading4" } as any], currentBlock, "after");
+                    },
+                    aliases: ["h4", "heading 4"],
+                    group: "Headings",
+                    icon: <span>H4</span>,
+                    subtext: "Used for a medium heading."
+                  },
+                  {
+                    title: "Heading 5",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "heading5" } as any], currentBlock, "after");
+                    },
+                    aliases: ["h5", "heading 5"],
+                    group: "Headings",
+                    icon: <span>H5</span>,
+                    subtext: "Used for a small heading."
+                  },
+                  {
+                    title: "Heading 6",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "heading6" } as any], currentBlock, "after");
+                    },
+                    aliases: ["h6", "heading 6"],
+                    group: "Headings",
+                    icon: <span>H6</span>,
+                    subtext: "Used for the smallest heading."
+                  },
+                  {
+                    title: "Quote",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "quote" } as any], currentBlock, "after");
+                    },
+                    aliases: ["blockquote", "quote"],
+                    group: "Basic blocks",
+                    icon: <span>❞</span>,
+                    subtext: "Insert a quote block."
+                  },
+                  {
+                    title: "Code Block",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "codeBlock" } as any], currentBlock, "after");
+                    },
+                    aliases: ["code", "pre"],
+                    group: "Basic blocks",
+                    icon: <span>&lt;/&gt;</span>,
+                    subtext: "Insert a code block."
+                  },
+                  {
+                    title: "Embed",
+                    onItemClick: () => {
+                      const currentBlock = editor.getTextCursorPosition().block;
+                      editor.insertBlocks([{ type: "embed" } as any], currentBlock, "after");
+                    },
+                    aliases: ["iframe", "video", "embed"],
+                    group: "Media",
+                    icon: <span>🌐</span>,
+                    subtext: "Embed an external URL."
+                  }
+                ],
+                query
+              )
+            }
+          />
+          <SuggestionMenuController
+            triggerCharacter={"["}
+            getItems={async (query) => getWikilinkItems(query)}
+          />
+        </BlockNoteView>
+      </div>
     </div>
   );
 };
