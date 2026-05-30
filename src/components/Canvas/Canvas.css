@@ -38,25 +38,41 @@
 .canvas-editor-container {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 200px); /* Adjust dynamically to fill workspace */
-  border-radius: 8px;
+  height: calc(100vh - 180px); /* Adjust dynamically to fill workspace */
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-tertiary);
-  margin-top: 1rem;
+  border: none !important;
+  background-color: transparent !important;
+  margin-top: 0.5rem;
   position: relative;
 }
 
-/* Force dark styles inside Excalidraw frames */
+/* Force dark styles and override Excalidraw theme variables */
 .canvas-editor-container .excalidraw {
   height: 100% !important;
   width: 100% !important;
   border: none !important;
+  box-shadow: none !important;
+  background-color: var(--bg-primary) !important;
+  
+  /* Excalidraw Custom Variable Overrides to Match Refine Design System */
+  --color-surface-primary: var(--bg-primary) !important;
+  --color-surface-secondary: var(--bg-secondary) !important;
+  --color-surface-low: var(--bg-tertiary) !important;
+  --color-surface-lowest: var(--bg-primary) !important;
+  
+  --theme-bg-color: var(--bg-primary) !important;
+  --theme-border-color: var(--border-subtle) !important;
 }
 
-/* Restyle Excalidraw dark theme wrapper to blend perfectly with Refine's background */
-.canvas-editor-container .excalidraw.theme--dark {
-  --theme-bg-color: var(--bg-secondary) !important;
-  --theme-border-color: var(--border-subtle) !important;
+/* Excalidraw App menu button overrides */
+.canvas-editor-container .excalidraw .App-menu__left {
   background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Ensure the main canvas takes full viewport depth */
+.canvas-editor-container .excalidraw .App-main {
+  background-color: var(--bg-primary) !important;
 }

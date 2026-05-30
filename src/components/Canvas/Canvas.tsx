@@ -20,6 +20,7 @@ export const Canvas: React.FC<CanvasProps> = ({ pageId, title }) => {
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<number | null>(null);
+  const lastSavedElementsRef = useRef<string>("");
 
   const emojis = [
     "🎨", "🖌️", "✏️", "✒️", "✍️", "🧩", "🎯", "⚡", "🌟", "🔥",
@@ -71,6 +72,7 @@ export const Canvas: React.FC<CanvasProps> = ({ pageId, title }) => {
                 },
                 files: parsed.files || {}
               });
+              lastSavedElementsRef.current = JSON.stringify(parsed.elements || []);
             }
           } catch (e) {
             // File does not exist yet (new canvas)
@@ -95,6 +97,13 @@ export const Canvas: React.FC<CanvasProps> = ({ pageId, title }) => {
   }, [pageId, vaultHandle]);
 
   const handleCanvasChange = (elements: readonly any[], appState: any, files: any) => {
+    const elementsStr = JSON.stringify(elements);
+    if (elementsStr === lastSavedElementsRef.current) {
+      return;
+    }
+
+    lastSavedElementsRef.current = elementsStr;
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -204,7 +213,7 @@ export const Canvas: React.FC<CanvasProps> = ({ pageId, title }) => {
         className="editor-title-input"
         value={title}
         onChange={(e) => updateNodeTitle(pageId, e.target.value)}
-        placeholder="Untitled Canvas"
+        placeholder="Untitled"
       />
 
       <div className="canvas-editor-container">
