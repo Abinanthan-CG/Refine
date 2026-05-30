@@ -5,7 +5,119 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 24px 2rem 0.5rem 2rem;
+  padding: 0 !important;
+  position: relative;
+}
+
+.canvas-floating-header {
+  position: absolute;
+  top: 10px;
+  left: 60px; /* Aligned next to Excalidraw hamburger menu (at left: 10px, width: 40px) */
+  height: 40px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 10px;
+  background: rgba(22, 22, 26, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 280px;
+}
+
+.canvas-floating-header:hover,
+.canvas-floating-header:focus-within {
+  background: rgba(22, 22, 26, 0.92) !important;
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25), var(--shadow-lg);
+  max-width: 480px;
+}
+
+.canvas-icon-trigger-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.canvas-icon-display {
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.canvas-icon-display:hover {
+  background-color: var(--bg-tertiary);
+  transform: scale(1.05);
+}
+
+.canvas-icon-display:active {
+  transform: scale(0.95);
+}
+
+.canvas-add-icon-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  opacity: 0.65;
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
+  padding: 0;
+}
+
+.canvas-add-icon-btn:hover {
+  opacity: 1;
+  background-color: var(--bg-tertiary);
+  transform: scale(1.05);
+}
+
+.canvas-add-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.canvas-floating-title-input {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0;
+  margin: 0;
+  width: 140px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: -0.01em;
+}
+
+.canvas-floating-header:hover .canvas-floating-title-input,
+.canvas-floating-title-input:focus {
+  width: 240px;
+}
+
+.canvas-emoji-picker {
+  top: 42px !important;
+  left: 0 !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid var(--border-medium) !important;
+  background-color: var(--bg-elevated) !important;
 }
 
 .canvas-loading-container {
@@ -38,11 +150,11 @@
 .canvas-editor-container {
   flex: 1;
   width: 100%;
-  min-height: 0; /* Let flexbox stretch this container dynamically to fill max remaining height */
+  min-height: 0;
   overflow: hidden;
   border: none !important;
   background-color: transparent !important;
-  margin-top: 0.5rem;
+  margin-top: 0;
   position: relative;
 }
 

@@ -160,61 +160,60 @@ export const Canvas: React.FC<CanvasProps> = ({ pageId, title }) => {
 
   return (
     <div className="canvas-wrapper">
-      <div className="editor-icon-section">
-        {node?.icon ? (
-          <div className="editor-icon-display" onClick={() => setShowPicker(true)} title="Change icon">
-            {node.icon}
-          </div>
-        ) : (
-          <button className="editor-add-icon-btn" onClick={() => setShowPicker(true)}>
-            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="2" fill="none">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            <span>Add icon</span>
-          </button>
-        )}
+      <div className="canvas-floating-header">
+        <div className="canvas-icon-trigger-wrapper">
+          {node?.icon ? (
+            <div className="canvas-icon-display" onClick={() => setShowPicker(true)} title="Change icon">
+              {node.icon}
+            </div>
+          ) : (
+            <button className="canvas-add-icon-btn" onClick={() => setShowPicker(true)} title="Add icon">
+              🎨
+            </button>
+          )}
 
-        {showPicker && (
-          <div className="emoji-picker-panel" ref={pickerRef}>
-            <div className="emoji-picker-header">
-              <span>Select Icon</span>
-              {node?.icon && (
-                <button 
-                  className="emoji-picker-remove-btn" 
-                  onClick={() => {
-                    updateNodeIcon(pageId, null);
-                    setShowPicker(false);
-                  }}
-                >
-                  Remove
-                </button>
-              )}
+          {showPicker && (
+            <div className="emoji-picker-panel canvas-emoji-picker" ref={pickerRef}>
+              <div className="emoji-picker-header">
+                <span>Select Icon</span>
+                {node?.icon && (
+                  <button 
+                    className="emoji-picker-remove-btn" 
+                    onClick={() => {
+                      updateNodeIcon(pageId, null);
+                      setShowPicker(false);
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="emoji-picker-grid">
+                {emojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    className="emoji-picker-btn"
+                    onClick={() => {
+                      updateNodeIcon(pageId, emoji);
+                      setShowPicker(false);
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="emoji-picker-grid">
-              {emojis.map((emoji) => (
-                <button
-                  key={emoji}
-                  className="emoji-picker-btn"
-                  onClick={() => {
-                    updateNodeIcon(pageId, emoji);
-                    setShowPicker(false);
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <input
+          type="text"
+          className="canvas-floating-title-input"
+          value={title}
+          onChange={(e) => updateNodeTitle(pageId, e.target.value)}
+          placeholder="Untitled Canvas"
+        />
       </div>
-
-      <input
-        type="text"
-        className="editor-title-input"
-        value={title}
-        onChange={(e) => updateNodeTitle(pageId, e.target.value)}
-        placeholder="Untitled"
-      />
 
       <div className="canvas-editor-container">
         <Excalidraw
