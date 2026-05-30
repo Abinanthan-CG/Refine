@@ -1,4 +1,4 @@
-# ✦ Refine ✦
+#  Refine 
 
 <div align="center">
   <p align="center">
