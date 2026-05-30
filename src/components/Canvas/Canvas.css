@@ -5,7 +5,7 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 48px 2rem 2rem 2rem;
+  padding: 24px 2rem 0.5rem 2rem;
 }
 
 .canvas-loading-container {
@@ -38,7 +38,7 @@
 .canvas-editor-container {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 180px); /* Adjust dynamically to fill workspace */
+  min-height: 0; /* Let flexbox stretch this container dynamically to fill max remaining height */
   overflow: hidden;
   border: none !important;
   background-color: transparent !important;
