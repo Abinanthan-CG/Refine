@@ -4,6 +4,7 @@ import { getVaultHandle, setVaultHandle } from '../utils/indexedDB';
 import { readAllVaultNodes, generateId, createFolderOnDisk, renameNodeOnDisk, moveNodeOnDisk, deleteNodeOnDisk, getUniqueFolderTitle, getUniqueSlug, getDirHandle, saveVaultFile } from '../utils/fileSystem';
 
 export type NodeType = 'page' | 'folder';
+export type PageType = 'note' | 'canvas';
 
 export interface AppNode {
   id: string;
@@ -14,6 +15,7 @@ export interface AppNode {
   content?: PartialBlock[];
   icon?: string;
   isFavorite?: boolean;
+  pageType?: PageType;
 }
 
 interface AppState {
@@ -250,6 +252,7 @@ export const useAppStore = create<AppState>((set) => ({
               title: node.title,
               icon: icon || undefined,
               isFavorite: node.isFavorite,
+              pageType: node.pageType,
               content: node.content
             }, null, 2);
             await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
@@ -276,6 +279,7 @@ export const useAppStore = create<AppState>((set) => ({
               title: node.title,
               icon: node.icon,
               isFavorite: !node.isFavorite || undefined,
+              pageType: node.pageType,
               content: node.content
             }, null, 2);
             await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);

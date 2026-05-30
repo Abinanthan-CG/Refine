@@ -131,6 +131,20 @@ async function walkDirectory(
     }
   }
 
+  // Identify slugs for both refine.json and excalidraw files
+  const refineSlugs = new Set<string>();
+  const excalidrawEntries = new Map<string, FileSystemFileHandle>();
+
+  for (const entry of entries) {
+    if (entry.kind === 'file') {
+      if (entry.name.endsWith('.refine.json') && entry.name !== '_refine.manifest.json') {
+        refineSlugs.add(entry.name.replace('.refine.json', ''));
+      } else if (entry.name.endsWith('.excalidraw')) {
+        excalidrawEntries.set(entry.name.replace('.excalidraw', ''), entry as FileSystemFileHandle);
+      }
+    }
+  }
+
   for (const entry of entries) {
     if (entry.kind === 'file' && entry.name.endsWith('.refine.json') && entry.name !== '_refine.manifest.json') {
       const slug = entry.name.replace('.refine.json', '');
@@ -148,12 +162,31 @@ async function walkDirectory(
           isFavorite: !!parsed.isFavorite,
           parentId,
           content: parsed.content,
+          pageType: parsed.pageType || 'note',
         });
       } catch (err) {
         console.error(`Error loading file ${entry.name}`, err);
       }
     }
   }
+
+  // Handle standalone .excalidraw nodes (auto-healing scanner)
+  for (const [slug, fileHandle] of excalidrawEntries.entries()) {
+    if (!refineSlugs.has(slug)) {
+      try {
+        nodes.push({
+          id: generateId(),
+          type: 'page',
+          title: slug,
+          parentId,
+          pageType: 'canvas',
+        });
+      } catch (err) {
+        console.error(`Error auto-initializing standalone canvas for ${fileHandle.name}`, err);
+      }
+    }
+  }
+
   return nodes;
 }
 
@@ -205,6 +238,11 @@ export async function renameNodeOnDisk(
           const mdHandle = await parentHandle.getFileHandle(`${oldSlug}.md`);
           await (mdHandle as any).move(`${newSlug}.md`);
         } catch (e) {}
+
+        try {
+          const excHandle = await parentHandle.getFileHandle(`${oldSlug}.excalidraw`);
+          await (excHandle as any).move(`${newSlug}.excalidraw`);
+        } catch (e) {}
       }
     } catch (e) {
       console.warn("Native file rename failed", e);
@@ -245,6 +283,11 @@ export async function moveNodeOnDisk(
         const mdHandle = await oldParentHandle.getFileHandle(`${oldSlug}.md`);
         await (mdHandle as any).move(newParentHandle, `${newSlug}.md`);
       } catch (e) {}
+
+      try {
+        const excHandle = await oldParentHandle.getFileHandle(`${oldSlug}.excalidraw`);
+        await (excHandle as any).move(newParentHandle, `${newSlug}.excalidraw`);
+      } catch (e) {}
     } catch (e) {
       console.warn("Native file move failed", e);
     }
@@ -267,5 +310,26 @@ export async function deleteNodeOnDisk(
     const slug = getUniqueSlug(nodes, node);
     deleteVaultFile(parentHandle, `${slug}.refine.json`);
     deleteVaultFile(parentHandle, `${slug}.md`);
+    deleteVaultFile(parentHandle, `${slug}.excalidraw`);
   }
+}
+
+export async function saveExcalidrawFile(
+  dirHandle: FileSystemDirectoryHandle,
+  filename: string,
+  data: string
+): Promise<void> {
+  const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(data);
+  await writable.close();
+}
+
+export async function readExcalidrawFile(
+  dirHandle: FileSystemDirectoryHandle,
+  filename: string
+): Promise<string> {
+  const fileHandle = await dirHandle.getFileHandle(filename);
+  const file = await fileHandle.getFile();
+  return await file.text();
 }

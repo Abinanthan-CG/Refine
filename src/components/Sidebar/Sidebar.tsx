@@ -20,8 +20,38 @@ export const Sidebar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showVaultPopover]);
 
-  const handleNewPage = () => {
-    addNode({ type: 'page', title: 'Untitled', parentId: null });
+  const [showPageTypePicker, setShowPageTypePicker] = useState(false);
+  const pageTypePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (pageTypePickerRef.current && !pageTypePickerRef.current.contains(e.target as Node)) {
+        setShowPageTypePicker(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowPageTypePicker(false);
+      }
+    };
+    if (showPageTypePicker) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showPageTypePicker]);
+
+  const handleCreateNote = () => {
+    addNode({ type: 'page', pageType: 'note', title: 'Untitled', parentId: null });
+    setShowPageTypePicker(false);
+  };
+
+  const handleCreateCanvas = () => {
+    addNode({ type: 'page', pageType: 'canvas', title: 'Untitled Canvas', parentId: null });
+    setShowPageTypePicker(false);
   };
 
   const handleNewFolder = () => {
@@ -64,13 +94,37 @@ export const Sidebar: React.FC = () => {
                 <span>Search...</span>
                 <kbd className="search-hint">Ctrl K</kbd>
               </div>
-              <button className="new-page-btn" onClick={handleNewPage}>
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>New Page</span>
-              </button>
+              <div className="new-page-picker-wrapper" ref={pageTypePickerRef}>
+                <button className="new-page-btn" onClick={() => setShowPageTypePicker(!showPageTypePicker)}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>New Page</span>
+                  <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" strokeWidth="2" fill="none" style={{ marginLeft: 'auto', opacity: 0.7 }}>
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+
+                {showPageTypePicker && (
+                  <div className="new-page-picker-dropdown">
+                    <button className="picker-option-btn" onClick={handleCreateNote}>
+                      <span className="option-icon">📝</span>
+                      <div className="option-text-group">
+                        <span className="option-title">New Note</span>
+                        <span className="option-subtitle">Rich block-based document</span>
+                      </div>
+                    </button>
+                    <button className="picker-option-btn" onClick={handleCreateCanvas}>
+                      <span className="option-icon">🎨</span>
+                      <div className="option-text-group">
+                        <span className="option-title">New Canvas</span>
+                        <span className="option-subtitle">Infinite Excalidraw board</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
               <button className="new-page-btn" onClick={handleNewFolder} style={{ marginTop: '0.5rem' }}>
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>

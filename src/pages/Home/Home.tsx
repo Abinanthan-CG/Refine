@@ -2,6 +2,7 @@ import React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useAppStore } from '../../store/appStore';
 import { Editor } from '../../components/Editor/Editor';
+import { Canvas } from '../../components/Canvas/Canvas';
 import './Home.css';
 
 export const Home: React.FC = () => {
@@ -32,7 +33,11 @@ export const Home: React.FC = () => {
           <pre style={{ whiteSpace: 'pre-wrap' }}>{(error as Error).stack}</pre>
         </div>
       )}>
-        <Editor key={activePage.id} pageId={activePage.id} initialContent={activePage.content} title={activePage.title} />
+        {activePage.pageType === 'canvas' ? (
+          <Canvas key={activePage.id} pageId={activePage.id} title={activePage.title} />
+        ) : (
+          <Editor key={activePage.id} pageId={activePage.id} initialContent={activePage.content} title={activePage.title} />
+        )}
       </ErrorBoundary>
     </div>
   );

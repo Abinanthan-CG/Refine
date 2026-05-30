@@ -55,7 +55,7 @@ export const SidebarTree: React.FC = () => {
               className={`favorite-item ${activePageId === page.id ? 'active' : ''}`}
               onClick={() => setActivePage(page.id)}
             >
-              <span className="favorite-icon">{page.icon || "📄"}</span>
+              <span className="favorite-icon">{page.icon || (page.pageType === 'canvas' ? "🎨" : "📄")}</span>
               <span className="favorite-title">{page.title}</span>
             </div>
           ))}
