@@ -43,6 +43,9 @@ interface AppState {
   initVault: () => Promise<void>;
   promptSelectVault: () => Promise<void>;
   setSaveStatus: (status: 'saved' | 'saving' | 'error' | null) => void;
+  
+  searchHighlight: string | null;
+  setSearchHighlight: (term: string | null) => void;
 }
 
 const getDescendantIds = (nodes: AppNode[], parentId: string): string[] => {
@@ -67,6 +70,7 @@ export const useAppStore = create<AppState>((set) => ({
   vaultHandle: null,
   vaultName: null,
   saveStatus: null,
+  searchHighlight: null,
 
   initVault: async () => {
     try {
@@ -293,6 +297,7 @@ export const useAppStore = create<AppState>((set) => ({
       };
     });
   },
+  setSearchHighlight: (term) => set({ searchHighlight: term }),
 }));
 
 

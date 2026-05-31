@@ -137,3 +137,7 @@ a {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+::highlight(search-highlight) {
+  background-color: var(--accent-primary);
+  color: white;
+}

@@ -83,7 +83,7 @@ function getContentSnippet(text: string, query: string): { snippet: string } {
 }
 
 export const CommandPalette: React.FC = () => {
-  const { nodes, vaultHandle, setActivePage } = useAppStore();
+  const { nodes, vaultHandle, setActivePage, setSearchHighlight } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -194,6 +194,9 @@ export const CommandPalette: React.FC = () => {
   }, [debouncedSearch, nodes, vaultHandle]);
 
   const handleSelect = (item: SearchResult) => {
+    if (search.trim()) {
+      setSearchHighlight(search.trim());
+    }
     setActivePage(item.page.id);
     setIsOpen(false);
   };

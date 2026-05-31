@@ -68,11 +68,16 @@ function isValidBlockContent(blocks: any): boolean {
   }
 }
 
+
+
+
 export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title }) => {
   const updateNodeContent = useAppStore((state) => state.updateNodeContent);
   const updateNodeTitle = useAppStore((state) => state.updateNodeTitle);
   const vaultHandle = useAppStore((state) => state.vaultHandle);
   const setSaveStatus = useAppStore((state) => state.setSaveStatus);
+  const searchHighlight = useAppStore((state) => state.searchHighlight);
+  const setSearchHighlight = useAppStore((state) => state.setSearchHighlight);
   const debounceTimerRef = useRef<number | null>(null);
 
   const validatedContent = (() => {
@@ -146,6 +151,119 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!searchHighlight || !editorContainerRef.current) return;
+    
+    const container = editorContainerRef.current;
+    let clearHighlightFn: (() => void) | null = null;
+    
+    // We wait 500ms for BlockNote/ProseMirror to fully render the text blocks
+    const highlightTimer = setTimeout(() => {
+      try {
+        if (!container) return;
+        
+        const term = searchHighlight.toLowerCase();
+        const ranges: Range[] = [];
+        
+        // Walk the text nodes inside the ProseMirror container
+        const walk = (node: Node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            // Skip inputs, script/style, picker, or buttons
+            if (
+              el.tagName === 'INPUT' ||
+              el.tagName === 'TEXTAREA' ||
+              el.tagName === 'BUTTON' ||
+              el.tagName === 'SCRIPT' ||
+              el.tagName === 'STYLE' ||
+              el.classList.contains('emoji-picker-panel') ||
+              el.classList.contains('editor-add-icon-btn')
+            ) {
+              return;
+            }
+          }
+          
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.nodeValue || '';
+            let index = text.toLowerCase().indexOf(term);
+            while (index !== -1) {
+              try {
+                const range = new Range();
+                range.setStart(node, index);
+                range.setEnd(node, index + term.length);
+                ranges.push(range);
+              } catch (e) {}
+              index = text.toLowerCase().indexOf(term, index + term.length);
+            }
+          } else {
+            const childNodes = Array.from(node.childNodes);
+            for (const child of childNodes) {
+              walk(child);
+            }
+          }
+        };
+        
+        // Start walk inside editorContainer
+        walk(container);
+        
+        if (ranges.length > 0) {
+          clearHighlightFn = () => {
+            try {
+              if (typeof (CSS as any).highlights !== 'undefined') {
+                (CSS as any).highlights.delete('search-highlight');
+              }
+            } catch (e) {}
+            try {
+              window.getSelection()?.removeAllRanges();
+            } catch (e) {}
+            setSearchHighlight(null);
+          };
+          
+          container.addEventListener('click', clearHighlightFn, { once: true });
+          
+          // Apply native Custom Highlight API if supported
+          if (typeof (CSS as any).highlights !== 'undefined') {
+            const highlight = new (window as any).Highlight(...ranges);
+            (CSS as any).highlights.set('search-highlight', highlight);
+            
+            // Smoothly scroll the first match into view
+            try {
+              const firstParent = ranges[0].startContainer.parentElement;
+              if (firstParent) {
+                firstParent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            } catch (scrollErr) {}
+          } else {
+            // Fallback to native window.find selection if CSS Highlights are not supported
+            try {
+              (window as any).find(searchHighlight, false, false, true, false, false, false);
+            } catch (err) {}
+          }
+        } else {
+          setSearchHighlight(null);
+        }
+      } catch (err) {
+        console.warn('Failed to perform CSS Custom Highlight', err);
+        setSearchHighlight(null);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(highlightTimer);
+      if (clearHighlightFn && container) {
+        container.removeEventListener('click', clearHighlightFn);
+      }
+      try {
+        if (typeof (CSS as any).highlights !== 'undefined') {
+          (CSS as any).highlights.delete('search-highlight');
+        }
+      } catch (e) {}
+      try {
+        window.getSelection()?.removeAllRanges();
+      } catch (e) {}
+    };
+  }, [pageId, searchHighlight, setSearchHighlight]);
 
   const node = useAppStore(state => state.nodes.find(n => n.id === pageId));
   const updateNodeIcon = useAppStore(state => state.updateNodeIcon);
