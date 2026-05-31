@@ -71,6 +71,61 @@ function isValidBlockContent(blocks: any): boolean {
 
 
 
+function extractPlainText(blocks: any[]): string {
+  if (!blocks || !Array.isArray(blocks)) return '';
+  let text = '';
+  for (const block of blocks) {
+    if (block.content) {
+      if (typeof block.content === 'string') {
+        text += block.content + ' ';
+      } else if (Array.isArray(block.content)) {
+        for (const inline of block.content) {
+          if (inline.text) {
+            text += inline.text + ' ';
+          }
+        }
+      }
+    }
+    if (block.children && Array.isArray(block.children)) {
+      text += extractPlainText(block.children) + ' ';
+    }
+  }
+  return text;
+}
+
+function getRelativeFilePath(nodes: any[], activeNode: any): string {
+  if (!activeNode) return '';
+  const pathParts: string[] = [activeNode.title];
+  
+  let currentParentId = activeNode.parentId;
+  while (currentParentId) {
+    const parentNode = nodes.find(n => n.id === currentParentId);
+    if (parentNode) {
+      pathParts.unshift(parentNode.title);
+      currentParentId = parentNode.parentId;
+    } else {
+      break;
+    }
+  }
+  
+  return pathParts.join(' / ');
+}
+
+function formatLastEdited(timestamp?: number): string {
+  if (!timestamp) return 'just now';
+  const diff = Date.now() - timestamp;
+  if (diff < 10000) return 'just now';
+  if (diff < 60000) return 'less than a minute ago';
+  
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}m ago`;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  
+  return new Date(timestamp).toLocaleDateString();
+}
+
 export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title }) => {
   const updateNodeContent = useAppStore((state) => state.updateNodeContent);
   const updateNodeTitle = useAppStore((state) => state.updateNodeTitle);
@@ -114,6 +169,18 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       clearTimeout(debounceTimerRef.current);
     }
     
+    if (statsDebounceRef.current) {
+      clearTimeout(statsDebounceRef.current);
+    }
+    
+    statsDebounceRef.current = window.setTimeout(() => {
+      const textContent = extractPlainText(editor.document);
+      const charVal = textContent.length;
+      const wordVal = textContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+      setWordCount(wordVal);
+      setCharCount(charVal);
+    }, 1000);
+    
     debounceTimerRef.current = window.setTimeout(async () => {
       const content = editor.document as any;
       updateNodeContent(pageId, content);
@@ -132,7 +199,16 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
           
           await saveVaultFile(dirHandle, `${slug}.md`, markdown);
           
-          const jsonContent = JSON.stringify({ id: node.id, title: node.title || title, icon: node.icon, isFavorite: node.isFavorite, content }, null, 2);
+          const jsonContent = JSON.stringify({
+            id: node.id,
+            title: node.title || title,
+            icon: node.icon,
+            isFavorite: node.isFavorite,
+            pageType: node.pageType || 'note',
+            createdAt: node.createdAt,
+            updatedAt: node.updatedAt,
+            content
+          }, null, 2);
           await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
           setSaveStatus('saved');
@@ -271,6 +347,24 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  const nodes = useAppStore(state => state.nodes);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const statsDebounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Initial stats computation on page change
+    const textContent = extractPlainText(editor.document);
+    const charVal = textContent.length;
+    const wordVal = textContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+    setWordCount(wordVal);
+    setCharCount(charVal);
+    
+    // Collapse on page switch
+    setIsExpanded(false);
+  }, [pageId]);
 
   const emojis = [
     "📝", "📄", "📁", "📂", "📚", "📓", "✏️", "✒️", "✍️", "📖",
@@ -424,6 +518,67 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
         }}
         placeholder="Untitled"
       />
+
+      {/* Document Info Collapsible Panel */}
+      <div className="document-info-section">
+        <button 
+          className="document-info-toggle" 
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+        >
+          <svg 
+            className={`document-info-chevron ${isExpanded ? 'expanded' : ''}`}
+            viewBox="0 0 24 24" 
+            width="12" 
+            height="12" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            fill="none"
+          >
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>
+            {wordCount} words · Last edited {formatLastEdited(node?.updatedAt)}
+          </span>
+        </button>
+        
+        <div className={`document-info-panel-wrapper ${isExpanded ? 'expanded' : ''}`}>
+          <div className="document-info-panel">
+            <div className="document-info-grid">
+              <div className="document-info-item">
+                <span className="document-info-label">Words</span>
+                <span className="document-info-value">{wordCount}</span>
+              </div>
+              <div className="document-info-item">
+                <span className="document-info-label">Characters</span>
+                <span className="document-info-value">{charCount}</span>
+              </div>
+              <div className="document-info-item">
+                <span className="document-info-label">Reading Time</span>
+                <span className="document-info-value">{Math.max(1, Math.round(wordCount / 200))} min read</span>
+              </div>
+              <div className="document-info-item">
+                <span className="document-info-label">File Path</span>
+                <span className="document-info-value" title={getRelativeFilePath(nodes, node)}>
+                  {getRelativeFilePath(nodes, node)}
+                </span>
+              </div>
+              <div className="document-info-item">
+                <span className="document-info-label">Created Date</span>
+                <span className="document-info-value">
+                  {node?.createdAt ? new Date(node.createdAt).toLocaleString() : 'Unknown'}
+                </span>
+              </div>
+              <div className="document-info-item">
+                <span className="document-info-label">Last Edited</span>
+                <span className="document-info-value">
+                  {node?.updatedAt ? new Date(node.updatedAt).toLocaleString() : 'Just now'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div 
         className="refine-blocknote-wrapper"
         onClickCapture={(e) => {

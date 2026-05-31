@@ -16,6 +16,8 @@ export interface AppNode {
   icon?: string;
   isFavorite?: boolean;
   pageType?: PageType;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 interface AppState {
@@ -129,7 +131,13 @@ export const useAppStore = create<AppState>((set) => ({
 
   addNode: (nodeData) => {
     const newId = generateId();
-    let newNode: AppNode = { ...nodeData, id: newId };
+    const now = Date.now();
+    let newNode: AppNode = { 
+      ...nodeData, 
+      id: newId,
+      createdAt: now,
+      updatedAt: now
+    };
     
     set((state) => {
       if (newNode.type === 'folder') {
@@ -172,7 +180,7 @@ export const useAppStore = create<AppState>((set) => ({
   updateNodeContent: (id, content) =>
     set((state) => ({
       nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, content } : n
+        n.id === id ? { ...n, content, updatedAt: Date.now() } : n
       ),
     })),
 
@@ -247,6 +255,7 @@ export const useAppStore = create<AppState>((set) => ({
   updateNodeIcon: (id, icon) => {
     set((state) => {
       const node = state.nodes.find((n) => n.id === id);
+      const now = Date.now();
       if (node && state.vaultHandle) {
         const slug = getUniqueSlug(state.nodes, node);
         getDirHandle(state.vaultHandle, state.nodes, node.parentId)
@@ -257,6 +266,8 @@ export const useAppStore = create<AppState>((set) => ({
               icon: icon || undefined,
               isFavorite: node.isFavorite,
               pageType: node.pageType,
+              createdAt: node.createdAt,
+              updatedAt: now,
               content: node.content
             }, null, 2);
             await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
@@ -265,7 +276,7 @@ export const useAppStore = create<AppState>((set) => ({
       }
       return {
         nodes: state.nodes.map((n) =>
-          n.id === id ? { ...n, icon: icon || undefined } : n
+          n.id === id ? { ...n, icon: icon || undefined, updatedAt: now } : n
         ),
       };
     });
@@ -274,6 +285,7 @@ export const useAppStore = create<AppState>((set) => ({
   toggleFavorite: (id) => {
     set((state) => {
       const node = state.nodes.find((n) => n.id === id);
+      const now = Date.now();
       if (node && state.vaultHandle) {
         const slug = getUniqueSlug(state.nodes, node);
         getDirHandle(state.vaultHandle, state.nodes, node.parentId)
@@ -284,6 +296,8 @@ export const useAppStore = create<AppState>((set) => ({
               icon: node.icon,
               isFavorite: !node.isFavorite || undefined,
               pageType: node.pageType,
+              createdAt: node.createdAt,
+              updatedAt: now,
               content: node.content
             }, null, 2);
             await saveVaultFile(dirHandle, `${slug}.refine.json`, sidecarContent);
@@ -292,7 +306,7 @@ export const useAppStore = create<AppState>((set) => ({
       }
       return {
         nodes: state.nodes.map((n) =>
-          n.id === id ? { ...n, isFavorite: !n.isFavorite } : n
+          n.id === id ? { ...n, isFavorite: !n.isFavorite, updatedAt: now } : n
         ),
       };
     });

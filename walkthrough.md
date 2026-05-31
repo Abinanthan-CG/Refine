@@ -113,14 +113,37 @@ We added a smooth, native-feeling temporary search term highlight feature inside
 
 
 
+## ✦ 7. Collapsible Document Info Metadata Panel
+
+We introduced a premium, collapsible **Document Info** metadata panel placed directly below the note title in the editor workspace, providing real-time document metrics, timestamps, and path contexts.
+
+* **Database & File Schema Timestamps (`src/store/appStore.ts`, `src/utils/fileSystem.ts`)**:
+  * Upgraded `AppNode` interface to include optional fields: `createdAt` and `updatedAt`.
+  * Set both properties to the current instant `Date.now()` when creating a new node (`addNode`).
+  * Updated sidecar write sequences for `updateNodeIcon` and `toggleFavorite` to persist timestamps inside the `.refine.json` metadata sidecar.
+  * Configured `walkDirectory` scanner to parse timestamps from disk sidecars, employing the file's native `lastModified` timestamp as an auto-healing metadata fallback for existing vaults.
+* **Live Word Count & Reading Time Parsing (`src/components/Editor/Editor.tsx`)**:
+  * Embedded a live word/character parsing pipeline. Text contents are extracted from all document blocks recursively and split by whitespace to calculate word counts and characters.
+  * Features a **1000ms debounce buffer** to dynamically update metadata as the user types without causing interface layout lag.
+  * Calculates estimated reading time using the standard average `words / 200` rounded format.
+* **Vault Path Breadcrumb Trace (`src/components/Editor/Editor.tsx`)**:
+  * Traces node parent IDs recursively up to the root vault handle to construct a beautiful breadcrumb file path relative to the vault root (e.g. `Projects / refine / README.md`).
+* **Subtle Collapsible Header Bar (`src/components/Editor/Editor.css`)**:
+  * Renders a quiet header preview below the title in small `12px` typography showing details like `ᐯ 247 words · Last edited 2m ago` or friendlier absolute dates.
+  * Clicking the bar expands a detailed double-column metadata table with smooth height transition animations.
+  * **CSS Height Transition Trick**: Uses a modern CSS Grid template layout (`grid-template-rows: 0fr` to `1fr`) to perform butter-smooth expanding and collapsing height transitions without hardcoded pixel constraints.
+
+---
+
 ## ✦ Verification & Compilation Status
 
-Ran full production compilation to verify type safety and asset bundling. The project builds completely with **zero warnings/errors** in under 35s:
+Ran full production compilation to verify type safety and asset bundling. The project builds completely with **zero warnings/errors** in under 60s:
 ```bash
 vite v5.4.21 building for production...
 transforming...
 ✓ 1395 modules transformed.
 rendering chunks...
-✓ built in 32.25s
+✓ built in 52.21s
 ```
+
 

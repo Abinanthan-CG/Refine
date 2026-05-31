@@ -163,6 +163,8 @@ async function walkDirectory(
           parentId,
           content: parsed.content,
           pageType: parsed.pageType || 'note',
+          createdAt: parsed.createdAt || file.lastModified || Date.now(),
+          updatedAt: parsed.updatedAt || file.lastModified || Date.now(),
         });
       } catch (err) {
         console.error(`Error loading file ${entry.name}`, err);
@@ -174,12 +176,15 @@ async function walkDirectory(
   for (const [slug, fileHandle] of excalidrawEntries.entries()) {
     if (!refineSlugs.has(slug)) {
       try {
+        const file = await fileHandle.getFile();
         nodes.push({
           id: generateId(),
           type: 'page',
           title: slug,
           parentId,
           pageType: 'canvas',
+          createdAt: file.lastModified || Date.now(),
+          updatedAt: file.lastModified || Date.now(),
         });
       } catch (err) {
         console.error(`Error auto-initializing standalone canvas for ${fileHandle.name}`, err);
