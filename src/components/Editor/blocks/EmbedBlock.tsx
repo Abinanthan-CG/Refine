@@ -1,8 +1,8 @@
 import { defaultProps } from '@blocknote/core';
-import { createReactBlockSpec } from '@blocknote/react';
+import { safeCreateReactBlockSpec } from './safeBlockSpec';
 import { useState } from 'react';
 
-export const EmbedBlock = createReactBlockSpec(
+export const EmbedBlock = safeCreateReactBlockSpec(
   {
     type: 'embed',
     propSchema: {

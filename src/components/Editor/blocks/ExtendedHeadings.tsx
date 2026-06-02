@@ -1,12 +1,12 @@
 import { defaultProps } from '@blocknote/core';
-import { createReactBlockSpec } from '@blocknote/react';
+import { safeCreateReactBlockSpec } from './safeBlockSpec';
 
 const headingPropSchema = {
   textAlignment: defaultProps.textAlignment,
   textColor: defaultProps.textColor,
 };
 
-export const Heading4Block = createReactBlockSpec(
+export const Heading4Block = safeCreateReactBlockSpec(
   {
     type: 'heading4',
     propSchema: headingPropSchema,
@@ -17,7 +17,7 @@ export const Heading4Block = createReactBlockSpec(
   }
 );
 
-export const Heading5Block = createReactBlockSpec(
+export const Heading5Block = safeCreateReactBlockSpec(
   {
     type: 'heading5',
     propSchema: headingPropSchema,
@@ -28,7 +28,7 @@ export const Heading5Block = createReactBlockSpec(
   }
 );
 
-export const Heading6Block = createReactBlockSpec(
+export const Heading6Block = safeCreateReactBlockSpec(
   {
     type: 'heading6',
     propSchema: headingPropSchema,

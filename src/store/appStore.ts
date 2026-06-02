@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import type { StateCreator, StoreMutatorIdentifier } from 'zustand';
 import type { PartialBlock } from '@blocknote/core';
 import { getVaultHandle, setVaultHandle } from '../utils/indexedDB';
 import { readAllVaultNodes, generateId, createFolderOnDisk, renameNodeOnDisk, moveNodeOnDisk, deleteNodeOnDisk, getUniqueFolderTitle, getUniqueSlug, getDirHandle, saveVaultFile } from '../utils/fileSystem';
+import { logger } from '../utils/logger';
 
 export type NodeType = 'page' | 'folder';
 export type PageType = 'note' | 'canvas';
@@ -33,7 +35,7 @@ interface AppState {
   toggleSidebar: () => void;
   setActivePage: (id: string | null) => void;
   setEditingNodeId: (id: string | null) => void;
-  addNode: (node: Omit<AppNode, 'id'>) => string; 
+  addNode: (node: Omit<AppNode, 'id'>) => string | undefined; 
   updateNodeTitle: (id: string, newTitle: string) => void;
   updateNodeContent: (id: string, content: PartialBlock[]) => void;
   deleteNode: (id: string) => void;
@@ -61,10 +63,53 @@ const getDescendantIds = (nodes: AppNode[], parentId: string): string[] => {
   return ids;
 };
 
+type StabilityMiddleware = <
+  T,
+  Mps extends [StoreMutatorIdentifier, unknown][] = [],
+  Mcs extends [StoreMutatorIdentifier, unknown][] = []
+>(
+  f: StateCreator<T, Mps, Mcs>
+) => StateCreator<T, Mps, Mcs>;
+
+const stabilityMiddlewareImpl = (f: any) => (set: any, get: any, store: any) => {
+  const safeSet = (...args: any[]) => {
+    try {
+      set(...args);
+    } catch (error) {
+      logger.logError('Zustand State Update', error);
+    }
+  };
+  
+  const initialState = f(safeSet, get, store);
+  const safeState = { ...initialState };
+  
+  for (const key in safeState) {
+    if (typeof safeState[key] === 'function') {
+      const originalMethod = safeState[key];
+      safeState[key] = (...args: any[]) => {
+        try {
+          const result = originalMethod(...args);
+          if (result instanceof Promise) {
+            return result.catch(error => {
+              logger.logError(`Zustand Async Action (${key})`, error);
+            });
+          }
+          return result;
+        } catch (error) {
+          logger.logError(`Zustand Action (${key})`, error);
+        }
+      };
+    }
+  }
+  return safeState;
+};
+
+const stabilityMiddleware = stabilityMiddlewareImpl as unknown as StabilityMiddleware;
+
 // Start with empty nodes, they will be loaded from Vault
 const initialNodes: AppNode[] = [];
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>()(stabilityMiddleware((set) => ({
   isSidebarOpen: true,
   activePageId: null,
   editingNodeId: null,
@@ -130,6 +175,15 @@ export const useAppStore = create<AppState>((set) => ({
     set({ editingNodeId: id }),
 
   addNode: (nodeData) => {
+    if (!nodeData.title || typeof nodeData.title !== 'string') {
+      logger.logWarning('addNode', 'Invalid or missing title for new node');
+      return undefined;
+    }
+    if (nodeData.type !== 'page' && nodeData.type !== 'folder') {
+      logger.logWarning('addNode', `Invalid node type: ${nodeData.type}`);
+      return undefined;
+    }
+
     const newId = generateId();
     const now = Date.now();
     let newNode: AppNode = { 
@@ -139,12 +193,12 @@ export const useAppStore = create<AppState>((set) => ({
       updatedAt: now
     };
     
-    set((state) => {
+    set((state: AppState) => {
       if (newNode.type === 'folder') {
         const uniqueTitle = getUniqueFolderTitle(state.nodes, newNode.title, newNode.parentId);
         newNode = { ...newNode, title: uniqueTitle };
         if (state.vaultHandle) {
-          createFolderOnDisk(state.vaultHandle, state.nodes, newNode.parentId, newNode.title).catch(e => console.warn(e));
+          createFolderOnDisk(state.vaultHandle, state.nodes, newNode.parentId, newNode.title).catch(e => logger.logError('createFolderOnDisk', e));
         }
       }
       return {
@@ -178,19 +232,29 @@ export const useAppStore = create<AppState>((set) => ({
   },
 
   updateNodeContent: (id, content) =>
-    set((state) => ({
-      nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, content, updatedAt: Date.now() } : n
-      ),
-    })),
+    set((state: AppState) => {
+      const nodeExists = state.nodes.some(n => n.id === id);
+      if (!nodeExists) {
+        logger.logWarning('updateNodeContent', `Attempted to update content for non-existent node: ${id}`);
+        return state;
+      }
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, content, updatedAt: Date.now() } : n
+        ),
+      };
+    }),
 
   deleteNode: (id) => {
-    set((state) => {
+    set((state: AppState) => {
       const nodeToDelete = state.nodes.find((n) => n.id === id);
-      if (!nodeToDelete) return state;
+      if (!nodeToDelete) {
+        logger.logWarning('deleteNode', `Attempted to delete non-existent node: ${id}`);
+        return state;
+      }
 
       if (state.vaultHandle) {
-        deleteNodeOnDisk(state.vaultHandle, state.nodes, nodeToDelete).catch(e => console.warn(e));
+        deleteNodeOnDisk(state.vaultHandle, state.nodes, nodeToDelete).catch(e => logger.logError('deleteNodeOnDisk', e));
       }
 
       const idsToDelete = [id];
@@ -312,6 +376,5 @@ export const useAppStore = create<AppState>((set) => ({
     });
   },
   setSearchHighlight: (term) => set({ searchHighlight: term }),
-}));
-
+})));
 

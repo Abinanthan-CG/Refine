@@ -1,7 +1,7 @@
 import { defaultProps } from '@blocknote/core';
-import { createReactBlockSpec } from '@blocknote/react';
+import { safeCreateReactBlockSpec } from './safeBlockSpec';
 
-export const QuoteBlock = createReactBlockSpec(
+export const QuoteBlock = safeCreateReactBlockSpec(
   {
     type: 'quote',
     propSchema: {

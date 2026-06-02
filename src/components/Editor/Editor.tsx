@@ -1,8 +1,16 @@
+/**
+ * ✦ EDITOR STABILITY RULES ✦
+ * 1. The editor instance is created ONCE per mount to avoid ProseMirror unmount crashes.
+ * 2. We synchronously replace content on pageId changes instead of tearing down the DOM.
+ * 3. All async file operations must be debounced and wrapped in try/catch.
+ * 4. Zustand actions accessed inside effects must use the dynamic `getState()` reference.
+ */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems, BlockNoteEditor } from '@blocknote/core';
 import type { PartialBlock } from '@blocknote/core';
+import '@blocknote/mantine/style.css';
 import '@blocknote/mantine/style.css';
 import { useAppStore } from '../../store/appStore';
 import { QuoteBlock } from './blocks/QuoteBlock';
@@ -74,21 +82,25 @@ function isValidBlockContent(blocks: any): boolean {
 function extractPlainText(blocks: any[]): string {
   if (!blocks || !Array.isArray(blocks)) return '';
   let text = '';
-  for (const block of blocks) {
-    if (block.content) {
-      if (typeof block.content === 'string') {
-        text += block.content + ' ';
-      } else if (Array.isArray(block.content)) {
-        for (const inline of block.content) {
-          if (inline.text) {
-            text += inline.text + ' ';
+  try {
+    for (const block of blocks) {
+      if (block.content) {
+        if (typeof block.content === 'string') {
+          text += block.content + ' ';
+        } else if (Array.isArray(block.content)) {
+          for (const inline of block.content) {
+            if (inline.text) {
+              text += inline.text + ' ';
+            }
           }
         }
       }
+      if (block.children && Array.isArray(block.children)) {
+        text += extractPlainText(block.children) + ' ';
+      }
     }
-    if (block.children && Array.isArray(block.children)) {
-      text += extractPlainText(block.children) + ' ';
-    }
+  } catch (e) {
+    console.warn('extractPlainText failed', e);
   }
   return text;
 }
@@ -126,6 +138,8 @@ function formatLastEdited(timestamp?: number): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
+
+
 export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title }) => {
   const updateNodeContent = useAppStore((state) => state.updateNodeContent);
   const updateNodeTitle = useAppStore((state) => state.updateNodeTitle);
@@ -134,37 +148,78 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
   const searchHighlight = useAppStore((state) => state.searchHighlight);
   const setSearchHighlight = useAppStore((state) => state.setSearchHighlight);
   const debounceTimerRef = useRef<number | null>(null);
+  const isSwitchingPageRef = useRef(false);
+  const prevPageIdRef = useRef<string>(pageId);
 
-  const validatedContent = (() => {
-    if (!initialContent || initialContent.length === 0) return undefined;
-    try {
-      if (isValidBlockContent(initialContent)) {
-        return initialContent as any;
-      }
-      console.warn("Malformed blocks or NaN values detected. Dropped initialContent.");
-      return undefined;
-    } catch (e) {
-      console.warn("Failed to validate initialContent. Dropping.", e);
-      return undefined;
-    }
-  })();
-
+  // Initialize the editor instance ONCE to keep it perfectly stable across page switches
   const editor = useMemo(() => {
     try {
       return BlockNoteEditor.create({
         schema,
-        initialContent: validatedContent,
       });
     } catch (e) {
-      console.error("BlockNoteEditor.create crashed on initialContent. Falling back to empty editor.", e);
+      console.error("BlockNoteEditor.create crashed on initialization. Falling back.", e);
       return BlockNoteEditor.create({
         schema,
-        initialContent: undefined,
       });
+    }
+  }, []);
+
+  // Synchronously replace blocks when pageId changes to avoid tearing down the editor DOM
+  useEffect(() => {
+    if (editor) {
+      const prevPageId = prevPageIdRef.current;
+      prevPageIdRef.current = pageId;
+
+      // 1. Flush any pending change from the previous page immediately to the PREVIOUS page ID!
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        const state = useAppStore.getState();
+        const prevNode = state.nodes.find(n => n.id === prevPageId);
+        if (prevNode) {
+          updateNodeContent(prevPageId, editor.document as any);
+        }
+      }
+      if (statsDebounceRef.current) {
+        clearTimeout(statsDebounceRef.current);
+        statsDebounceRef.current = null;
+      }
+
+      try {
+        isSwitchingPageRef.current = true;
+        
+        const blocks = initialContent || useAppStore.getState().nodes.find(n => n.id === pageId)?.content || [];
+        const validated = isValidBlockContent(blocks) ? (blocks as any) : undefined;
+        
+        editor.replaceBlocks(editor.document, validated || [
+          {
+            type: "paragraph",
+            content: ""
+          }
+        ]);
+      } catch (err) {
+        console.error("Failed to swap page content synchronously", err);
+      } finally {
+        isSwitchingPageRef.current = false;
+      }
+
+      setIsExpanded(false);
+
+      // Instantly compute word count metrics for the new page
+      try {
+        const textContent = extractPlainText(editor.document);
+        const charVal = textContent.length;
+        const wordVal = textContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+        setWordCount(wordVal);
+        setCharCount(charVal);
+      } catch (e) {}
     }
   }, [pageId]);
 
   const handleChange = () => {
+    if (isSwitchingPageRef.current) return;
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -174,6 +229,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
     }
     
     statsDebounceRef.current = window.setTimeout(() => {
+      if (isSwitchingPageRef.current) return;
       const textContent = extractPlainText(editor.document);
       const charVal = textContent.length;
       const wordVal = textContent.trim().split(/\s+/).filter(w => w.length > 0).length;
@@ -181,17 +237,21 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
       setCharCount(charVal);
     }, 1000);
     
+    // Capture content synchronously to avoid switching race conditions during async delays
+    const contentToSave = editor.document as any;
+    const targetPageId = pageId;
+
     debounceTimerRef.current = window.setTimeout(async () => {
-      const content = editor.document as any;
-      updateNodeContent(pageId, content);
+      if (isSwitchingPageRef.current) return;
+      updateNodeContent(targetPageId, contentToSave);
       
       if (vaultHandle) {
         setSaveStatus('saving');
         try {
-          const markdown = await editor.blocksToMarkdownLossy(editor.document);
+          const markdown = await editor.blocksToMarkdownLossy(contentToSave);
           const { getUniqueSlug, saveVaultFile, getDirHandle } = await import('../../utils/fileSystem');
           const state = useAppStore.getState();
-          const node = state.nodes.find(n => n.id === pageId);
+          const node = state.nodes.find(n => n.id === targetPageId);
           if (!node) return;
           const slug = getUniqueSlug(state.nodes, node);
           
@@ -207,7 +267,7 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
             pageType: node.pageType || 'note',
             createdAt: node.createdAt,
             updatedAt: node.updatedAt,
-            content
+            content: contentToSave
           }, null, 2);
           await saveVaultFile(dirHandle, `${slug}.refine.json`, jsonContent);
           
@@ -222,8 +282,20 @@ export const Editor: React.FC<EditorProps> = ({ pageId, initialContent, title })
 
   useEffect(() => {
     return () => {
+      // Flush any pending change immediately on unmount!
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        const state = useAppStore.getState();
+        const lastPageId = prevPageIdRef.current;
+        const node = state.nodes.find(n => n.id === lastPageId);
+        if (node) {
+          useAppStore.getState().updateNodeContent(lastPageId, editor.document as any);
+        }
+      }
+      if (statsDebounceRef.current) {
+        clearTimeout(statsDebounceRef.current);
+        statsDebounceRef.current = null;
       }
     };
   }, []);

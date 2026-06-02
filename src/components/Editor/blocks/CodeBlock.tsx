@@ -1,8 +1,8 @@
 import { defaultProps } from '@blocknote/core';
-import { createReactBlockSpec } from '@blocknote/react';
+import { safeCreateReactBlockSpec } from './safeBlockSpec';
 import 'highlight.js/styles/atom-one-dark.css';
 
-export const CodeBlock = createReactBlockSpec(
+export const CodeBlock = safeCreateReactBlockSpec(
   {
     type: 'codeBlock',
     propSchema: {
@@ -27,3 +27,4 @@ export const CodeBlock = createReactBlockSpec(
     },
   }
 );
+

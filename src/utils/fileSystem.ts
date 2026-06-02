@@ -1,4 +1,36 @@
 import type { AppNode } from '../store/appStore';
+import { logger } from './logger';
+
+const fileWriteQueue = new Map<string, Promise<any>>();
+
+export const enqueueFileOp = <T>(key: string, operation: () => Promise<T>): Promise<T> => {
+  const currentPromise = fileWriteQueue.get(key) || Promise.resolve();
+  const nextPromise = currentPromise
+    .then(() => operation())
+    .catch(async (error) => {
+      logger.logError(`FileOp (${key})`, error);
+      if (error.name === 'NotAllowedError' || (error.message && error.message.includes('permission'))) {
+        try {
+          const { useAppStore } = await import('../store/appStore');
+          const store = useAppStore.getState();
+          store.setSaveStatus('error');
+          store.promptSelectVault();
+        } catch (e) {
+          logger.logError('RecoverPermission', e);
+        }
+      }
+      throw error;
+    })
+    .finally(() => {
+      if (fileWriteQueue.get(key) === nextPromise) {
+        fileWriteQueue.delete(key);
+      }
+    });
+  
+  fileWriteQueue.set(key, nextPromise);
+  return nextPromise;
+};
+
 
 export function slugify(text: string): string {
   return text
@@ -89,26 +121,31 @@ export async function saveVaultFile(
   filename: string,
   content: string
 ): Promise<void> {
-  const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(content);
-  await writable.close();
+  return enqueueFileOp(`${dirHandle.name}/${filename}`, async () => {
+    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  });
 }
 
 export async function deleteVaultFile(
   dirHandle: FileSystemDirectoryHandle,
   filename: string
 ): Promise<void> {
-  try {
-    await dirHandle.removeEntry(filename);
-  } catch (err) {
-    console.warn(`Failed to delete ${filename}`, err);
-  }
+  return enqueueFileOp(`delete-${dirHandle.name}/${filename}`, async () => {
+    try {
+      await dirHandle.removeEntry(filename);
+    } catch (err) {
+      logger.logWarning('deleteVaultFile', `Failed to delete ${filename}: ${err}`);
+    }
+  });
 }
 
 async function walkDirectory(
   dirHandle: FileSystemDirectoryHandle,
-  parentId: string | null
+  parentId: string | null,
+  loadedIds = new Set<string>()
 ): Promise<AppNode[]> {
   const nodes: AppNode[] = [];
   const entries = [];
@@ -126,7 +163,7 @@ async function walkDirectory(
         title: entry.name,
         parentId,
       });
-      const children = await walkDirectory(entry as FileSystemDirectoryHandle, folderId);
+      const children = await walkDirectory(entry as FileSystemDirectoryHandle, folderId, loadedIds);
       nodes.push(...children);
     }
   }
@@ -154,8 +191,15 @@ async function walkDirectory(
         const text = await file.text();
         const parsed = JSON.parse(text);
         
+        const parsedId = parsed.id || generateId();
+        if (loadedIds.has(parsedId)) {
+          console.warn(`Ignoring duplicate node ID ${parsedId} from file ${entry.name}`);
+          continue;
+        }
+        loadedIds.add(parsedId);
+
         nodes.push({
-          id: parsed.id || generateId(),
+          id: parsedId,
           type: 'page',
           title: parsed.title || slug,
           icon: parsed.icon,
@@ -177,8 +221,11 @@ async function walkDirectory(
     if (!refineSlugs.has(slug)) {
       try {
         const file = await fileHandle.getFile();
+        const canvasId = generateId();
+        loadedIds.add(canvasId);
+
         nodes.push({
-          id: generateId(),
+          id: canvasId,
           type: 'page',
           title: slug,
           parentId,
@@ -209,8 +256,10 @@ export async function createFolderOnDisk(
   parentId: string | null,
   folderName: string
 ): Promise<void> {
-  const parentHandle = await getDirHandle(vaultHandle, nodes, parentId);
-  await parentHandle.getDirectoryHandle(folderName, { create: true });
+  return enqueueFileOp(`create-folder-${folderName}`, async () => {
+    const parentHandle = await getDirHandle(vaultHandle, nodes, parentId);
+    await parentHandle.getDirectoryHandle(folderName, { create: true });
+  });
 }
 
 export async function renameNodeOnDisk(
@@ -219,40 +268,42 @@ export async function renameNodeOnDisk(
   node: AppNode,
   newTitle: string
 ): Promise<void> {
-  const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
-  
-  if (node.type === 'folder') {
-    try {
-      const srcDir = await parentHandle.getDirectoryHandle(node.title);
-      await copyDirectory(srcDir, parentHandle, newTitle);
-      await parentHandle.removeEntry(node.title, { recursive: true });
-    } catch (e) {
-      console.warn("Folder rename failed", e);
-    }
-  } else {
-    try {
-      const oldSlug = getUniqueSlug(nodes, node);
-      const tempNode = { ...node, title: newTitle };
-      const newSlug = getUniqueSlug(nodes, tempNode);
-      
-      if (oldSlug !== newSlug) {
-        const jsonHandle = await parentHandle.getFileHandle(`${oldSlug}.refine.json`);
-        await (jsonHandle as any).move(`${newSlug}.refine.json`);
-        
-        try {
-          const mdHandle = await parentHandle.getFileHandle(`${oldSlug}.md`);
-          await (mdHandle as any).move(`${newSlug}.md`);
-        } catch (e) {}
-
-        try {
-          const excHandle = await parentHandle.getFileHandle(`${oldSlug}.excalidraw`);
-          await (excHandle as any).move(`${newSlug}.excalidraw`);
-        } catch (e) {}
+  return enqueueFileOp(`rename-${node.id}`, async () => {
+    const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
+    
+    if (node.type === 'folder') {
+      try {
+        const srcDir = await parentHandle.getDirectoryHandle(node.title);
+        await copyDirectory(srcDir, parentHandle, newTitle);
+        await parentHandle.removeEntry(node.title, { recursive: true });
+      } catch (e) {
+        logger.logWarning("Folder rename failed", String(e));
       }
-    } catch (e) {
-      console.warn("Native file rename failed", e);
+    } else {
+      try {
+        const oldSlug = getUniqueSlug(nodes, node);
+        const tempNode = { ...node, title: newTitle };
+        const newSlug = getUniqueSlug(nodes, tempNode);
+        
+        if (oldSlug !== newSlug) {
+          const jsonHandle = await parentHandle.getFileHandle(`${oldSlug}.refine.json`);
+          await (jsonHandle as any).move(`${newSlug}.refine.json`);
+          
+          try {
+            const mdHandle = await parentHandle.getFileHandle(`${oldSlug}.md`);
+            await (mdHandle as any).move(`${newSlug}.md`);
+          } catch (e) {}
+
+          try {
+            const excHandle = await parentHandle.getFileHandle(`${oldSlug}.excalidraw`);
+            await (excHandle as any).move(`${newSlug}.excalidraw`);
+          } catch (e) {}
+        }
+      } catch (e) {
+        logger.logWarning("Native file rename failed", String(e));
+      }
     }
-  }
+  });
 }
 
 export async function moveNodeOnDisk(
@@ -263,40 +314,42 @@ export async function moveNodeOnDisk(
   newParentId: string | null,
   newTitle?: string
 ): Promise<void> {
-  const oldParentHandle = await getDirHandle(vaultHandle, nodes, oldParentId);
-  const newParentHandle = await getDirHandle(vaultHandle, nodes, newParentId);
-  const targetTitle = newTitle || node.title;
-  
-  if (node.type === 'folder') {
-    try {
-      const srcDir = await oldParentHandle.getDirectoryHandle(node.title);
-      await copyDirectory(srcDir, newParentHandle, targetTitle);
-      await oldParentHandle.removeEntry(node.title, { recursive: true });
-    } catch (e) {
-      console.warn("Folder move failed", e);
-    }
-  } else {
-    try {
-      const oldSlug = getUniqueSlug(nodes, node);
-      const tempNode = { ...node, parentId: newParentId, title: targetTitle };
-      const newSlug = getUniqueSlug(nodes, tempNode);
-      
-      const jsonHandle = await oldParentHandle.getFileHandle(`${oldSlug}.refine.json`);
-      await (jsonHandle as any).move(newParentHandle, `${newSlug}.refine.json`);
-      
+  return enqueueFileOp(`move-${node.id}`, async () => {
+    const oldParentHandle = await getDirHandle(vaultHandle, nodes, oldParentId);
+    const newParentHandle = await getDirHandle(vaultHandle, nodes, newParentId);
+    const targetTitle = newTitle || node.title;
+    
+    if (node.type === 'folder') {
       try {
-        const mdHandle = await oldParentHandle.getFileHandle(`${oldSlug}.md`);
-        await (mdHandle as any).move(newParentHandle, `${newSlug}.md`);
-      } catch (e) {}
+        const srcDir = await oldParentHandle.getDirectoryHandle(node.title);
+        await copyDirectory(srcDir, newParentHandle, targetTitle);
+        await oldParentHandle.removeEntry(node.title, { recursive: true });
+      } catch (e) {
+        logger.logWarning("Folder move failed", String(e));
+      }
+    } else {
+      try {
+        const oldSlug = getUniqueSlug(nodes, node);
+        const tempNode = { ...node, parentId: newParentId, title: targetTitle };
+        const newSlug = getUniqueSlug(nodes, tempNode);
+        
+        const jsonHandle = await oldParentHandle.getFileHandle(`${oldSlug}.refine.json`);
+        await (jsonHandle as any).move(newParentHandle, `${newSlug}.refine.json`);
+        
+        try {
+          const mdHandle = await oldParentHandle.getFileHandle(`${oldSlug}.md`);
+          await (mdHandle as any).move(newParentHandle, `${newSlug}.md`);
+        } catch (e) {}
 
-      try {
-        const excHandle = await oldParentHandle.getFileHandle(`${oldSlug}.excalidraw`);
-        await (excHandle as any).move(newParentHandle, `${newSlug}.excalidraw`);
-      } catch (e) {}
-    } catch (e) {
-      console.warn("Native file move failed", e);
+        try {
+          const excHandle = await oldParentHandle.getFileHandle(`${oldSlug}.excalidraw`);
+          await (excHandle as any).move(newParentHandle, `${newSlug}.excalidraw`);
+        } catch (e) {}
+      } catch (e) {
+        logger.logWarning("Native file move failed", String(e));
+      }
     }
-  }
+  });
 }
 
 export async function deleteNodeOnDisk(
@@ -304,19 +357,21 @@ export async function deleteNodeOnDisk(
   nodes: AppNode[],
   node: AppNode
 ): Promise<void> {
-  const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
-  if (node.type === 'folder') {
-    try {
-      await parentHandle.removeEntry(node.title, { recursive: true });
-    } catch (e) {
-      console.warn("Failed to delete folder", e);
+  return enqueueFileOp(`delete-node-${node.id}`, async () => {
+    const parentHandle = await getDirHandle(vaultHandle, nodes, node.parentId);
+    if (node.type === 'folder') {
+      try {
+        await parentHandle.removeEntry(node.title, { recursive: true });
+      } catch (e) {
+        logger.logWarning("Failed to delete folder", String(e));
+      }
+    } else {
+      const slug = getUniqueSlug(nodes, node);
+      deleteVaultFile(parentHandle, `${slug}.refine.json`);
+      deleteVaultFile(parentHandle, `${slug}.md`);
+      deleteVaultFile(parentHandle, `${slug}.excalidraw`);
     }
-  } else {
-    const slug = getUniqueSlug(nodes, node);
-    deleteVaultFile(parentHandle, `${slug}.refine.json`);
-    deleteVaultFile(parentHandle, `${slug}.md`);
-    deleteVaultFile(parentHandle, `${slug}.excalidraw`);
-  }
+  });
 }
 
 export async function saveExcalidrawFile(
@@ -324,10 +379,12 @@ export async function saveExcalidrawFile(
   filename: string,
   data: string
 ): Promise<void> {
-  const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(data);
-  await writable.close();
+  return enqueueFileOp(`${dirHandle.name}/${filename}`, async () => {
+    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(data);
+    await writable.close();
+  });
 }
 
 export async function readExcalidrawFile(
